@@ -109,6 +109,12 @@
 	<Reference Include="Newtonsoft.Json">
 	  <HintPath>$(WrathPath)\Wrath_Data\Managed\Newtonsoft.Json.dll</HintPath>
 	</Reference>
+	<Reference Include="Owlcat.Runtime.UniRx">
+	  <HintPath>$(WrathPath)\Wrath_Data\Managed\Owlcat.Runtime.UniRx.dll</HintPath>
+	</Reference>
+	<Reference Include="Rewired_Core">
+	  <HintPath>$(WrathPath)\Wrath_Data\Managed\Rewired_Core.dll</HintPath>
+	</Reference>
 
     <!-- Harmony -->
     <Reference Include="0Harmony">
