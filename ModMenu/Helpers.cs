@@ -123,9 +123,9 @@ namespace ModMenu
     public class SettingsDescriptionUpdater<T>
         where T : SettingsEntityWithValueVM
     {
-      private Transform settingsUI;
+      private Transform? settingsUI;
 
-      private List<SettingsEntityWithValueView<T>> settingViews;
+      private List<SettingsEntityWithValueView<T>>? settingViews;
 
 
       private bool Ensure()
@@ -162,9 +162,9 @@ namespace ModMenu
       {
         if (!Ensure()) return false;
 
-        T svm = null;
+        T? svm = null;
 
-        foreach (var settingView in settingViews)
+        foreach (var settingView in settingViews ?? [])
         {
           var test = (T)settingView.GetViewModel();
           if (test.Title.Text.Equals(title))

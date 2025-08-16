@@ -147,7 +147,7 @@ namespace ModMenu
     /// <returns>
     /// The setting with the specified <paramref name="key"/>, or null if it does not exist or has the wrong type.
     /// </returns>
-    public static T GetSetting<T, TValue>(string key) where T : SettingsEntity<TValue>
+    public static T? GetSetting<T, TValue>(string key) where T : SettingsEntity<TValue>
     {
       if (!Settings.ContainsKey(key))
       {
@@ -168,7 +168,7 @@ namespace ModMenu
     /// The value of the setting with the specified <paramref name="key"/>, or <c>default</c> if it does not exist or
     /// has the wrong type.
     /// </returns>
-    public static T GetSettingValue<T>(string key)
+    public static T? GetSettingValue<T>(string key)
     {
       var setting = GetSetting<SettingsEntity<T>, T>(key);
       return setting is null ? default : setting.GetValue();

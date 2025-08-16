@@ -48,7 +48,7 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPostfix]
     internal static void RaiseOMMStateChangedEvent(OwlcatModification __instance)
     {
-      EventBus.RaiseEvent<ISubscriberToModStateChange>(subscriber => subscriber.OnOMMModStateChanged(__instance?.Manifest.UniqueName, false));
+      EventBus.RaiseEvent<ISubscriberToModStateChange>(subscriber => subscriber.OnOMMModStateChanged(__instance.Manifest.UniqueName, false));
     }
   }
 }

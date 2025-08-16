@@ -24,9 +24,9 @@ namespace ModMenu.NewTypes.ModRecording
   {
     const string ModListJsonFileName = "header.json.ModList";
 
-    public List<ModRecord> UmmModRecordList;
-    public List<ModRecord> OwlModRecordList;
-    public List<ModRecord> OtherModRecordList;
+    public List<ModRecord>? UmmModRecordList;
+    public List<ModRecord>? OwlModRecordList;
+    public List<ModRecord>? OtherModRecordList;
 
     [JsonObject]
     [Serializable]
@@ -35,9 +35,9 @@ namespace ModMenu.NewTypes.ModRecording
       [JsonProperty]
       public ModType modType;
       [JsonProperty]
-      public string Id;
+      public string Id = null!;
       [JsonProperty]
-      public string Version;
+      public string? Version;
 
       internal enum ModType
       {
@@ -65,8 +65,8 @@ namespace ModMenu.NewTypes.ModRecording
           .Select(m => new ModRecord() { modType = ModRecord.ModType.OwlMod, Id = m.Manifest.UniqueName, Version = m.Manifest.Version }))
         .ToArray();
     }
-    static MethodInfo OwlcatJsonConvert_DeserializeObject_SaveInfo;
-    static CodeInstruction OwlcatJsonConvert_DeserializeObject_SaveInfoWithModList;
+    static MethodInfo OwlcatJsonConvert_DeserializeObject_SaveInfo = null!;
+    static CodeInstruction OwlcatJsonConvert_DeserializeObject_SaveInfoWithModList = null!;
 
     [HarmonyPrepare]
     static bool PreparePatchForSaveInfoWithModList()
@@ -124,7 +124,7 @@ namespace ModMenu.NewTypes.ModRecording
           return;
         }
         var text = saver.ReadJson(ModListJsonFileName);
-        ModRecord[] arr = null;
+        ModRecord[]? arr = null;
         if (!text.IsNullOrEmpty())
           arr = SaveSystemJsonSerializer.Serializer.DeserializeObject<ModRecord[]>(text);
         if (arr != null && __result is SaveInfoWithModList saveInfoWithMods)
@@ -162,10 +162,10 @@ namespace ModMenu.NewTypes.ModRecording
     static class PatchToSerializeModInfo
     {
 
-      static MethodInfo targetMethod;
-      static FieldInfo saveInfoReflected;
+      static MethodInfo? targetMethod;
+      static FieldInfo? saveInfoReflected;
       [HarmonyTargetMethod]
-      static MethodBase TargetMethod()
+      static MethodBase? TargetMethod()
       {
         var types = typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Instance);
         foreach (var t in types)

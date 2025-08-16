@@ -124,8 +124,8 @@ namespace ModMenu.NewTypes.ModRecording
     #endregion
 
     #region Icons
-    static Texture2D m_IconLikeTexture;
-    static Sprite m_IconLike;
+    static Texture2D? m_IconLikeTexture;
+    static Sprite? m_IconLike;
     internal static Sprite IconLike
     {
       get
@@ -147,8 +147,8 @@ namespace ModMenu.NewTypes.ModRecording
       }
     }
 
-    static Texture2D m_IconDislikeTexture;
-    static Sprite m_IconDislike;
+    static Texture2D? m_IconDislikeTexture;
+    static Sprite? m_IconDislike;
     internal static Sprite IconDislike
     {
       get
@@ -169,8 +169,8 @@ namespace ModMenu.NewTypes.ModRecording
         return m_IconDislike;
       }
     }
-    static Texture2D m_GreenCheckmarkTexture;
-    static Sprite m_GreenCheckmark;
+    static Texture2D? m_GreenCheckmarkTexture;
+    static Sprite? m_GreenCheckmark;
     internal static Sprite IconGreenCheckmark
     {
       get
@@ -191,8 +191,8 @@ namespace ModMenu.NewTypes.ModRecording
         return m_GreenCheckmark;
       }
     }
-    static Texture2D m_IconFailureTexture;
-    static Sprite m_IconFailure;
+    static Texture2D? m_IconFailureTexture;
+    static Sprite? m_IconFailure;
     internal static Sprite IconFailure
     {
       get
@@ -217,8 +217,8 @@ namespace ModMenu.NewTypes.ModRecording
         return m_IconFailure;
       }
     }
-    static Texture2D m_IconNewTexture;
-    static Sprite m_IconNew;
+    static Texture2D? m_IconNewTexture;
+    static Sprite? m_IconNew;
     internal static Sprite IconNew
     {
       get
@@ -240,8 +240,8 @@ namespace ModMenu.NewTypes.ModRecording
         return m_IconNew;
       }
     }
-    static Texture2D m_IconOkTexture;
-    static Sprite m_IconOk;
+    static Texture2D? m_IconOkTexture;
+    static Sprite? m_IconOk;
     internal static Sprite IconOk
     {
       get

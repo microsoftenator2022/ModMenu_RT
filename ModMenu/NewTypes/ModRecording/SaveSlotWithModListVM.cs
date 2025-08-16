@@ -43,7 +43,7 @@ namespace ModMenu.NewTypes.ModRecording
     public ReactiveProperty<ModRecordState> StateOfMods = new();
     public ReactiveCommand<SaveSlotWithModListVM> ReactiveRefresh = new();
 
-    internal SaveSlotModRecordView BoundModRecordView;
+    internal SaveSlotModRecordView? BoundModRecordView;
 
 
     public SaveSlotWithModListVM(SaveInfo saveInfo, IReadOnlyReactiveProperty<SaveLoadMode> mode, SaveLoadActions saveLoadActions, bool allowSwitchOff = false)

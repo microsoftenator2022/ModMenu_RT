@@ -44,16 +44,16 @@ namespace ModMenu.NewTypes.ModRecording
     const string nameContainer = "ModMenuContainerForModRecordView";
     const string nameRecordView = "ModMenuModRecordView";
 
-    SaveInfoWithModList Record;
+    SaveInfoWithModList? Record;
 
-    TextMeshProUGUI m_ModStuff;
-    Image SpriteModStuff;
-    TextMeshProUGUI m_NoDep;
-    Image SpriteNoDep;
-    OwlcatButton ButtonEnable;
-    OwlcatButton ButtonDisable;
-    OwlcatSelectable TooltipModStuff;
-    OwlcatSelectable TooltipNoDep;
+    TextMeshProUGUI m_ModStuff = null!;
+    Image SpriteModStuff = null!;
+    TextMeshProUGUI m_NoDep = null!;
+    Image SpriteNoDep = null!;
+    OwlcatButton? ButtonEnable;
+    OwlcatButton? ButtonDisable;
+    OwlcatSelectable TooltipModStuff = null!;
+    OwlcatSelectable TooltipNoDep = null!;
 
     public override void BindViewImplementation()
     {
@@ -68,7 +68,7 @@ namespace ModMenu.NewTypes.ModRecording
         return;
       };
       Record = modInfo;
-      (ViewModel as SaveSlotWithModListVM).BoundModRecordView = this;
+      ((SaveSlotWithModListVM)ViewModel).BoundModRecordView = this;
       Refresh();
       TooltipModStuff.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.WithDependency, this));
       TooltipNoDep.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.NoDependency, this));
@@ -111,7 +111,7 @@ namespace ModMenu.NewTypes.ModRecording
     internal void Refresh()
     {
       Main.Logger.Log($"SaveSlotModRecordView run Refresh");
-      var saveSlot = ViewModel as SaveSlotWithModListVM;
+      var saveSlot = (SaveSlotWithModListVM)ViewModel;
       var totalMods = saveSlot.OwlMods.Count + saveSlot.UMMMods.Count + saveSlot.OtherMods.Count;
       bool Console = ButtonEnable == null || ButtonDisable == null;
       if (totalMods == 0)
@@ -123,7 +123,7 @@ namespace ModMenu.NewTypes.ModRecording
         m_NoDep.transform.parent.transform.gameObject.SetActive(false);
         m_ModStuff.transform.parent.gameObject.SetActive(true);
         if (!Console)
-        ButtonEnable.SetInteractable(false);
+          ButtonEnable!.SetInteractable(false);
         return;
       }
 
@@ -171,8 +171,8 @@ namespace ModMenu.NewTypes.ModRecording
         m_NoDep.transform.parent.gameObject.SetActive(true);
         if (!Console)
         {
-          ButtonEnable.gameObject.SetActive(true);
-          ButtonDisable.gameObject.SetActive(true);
+          ButtonEnable!.gameObject.SetActive(true);
+          ButtonDisable!.gameObject.SetActive(true);
         }
       }
       if (!Console)
@@ -181,28 +181,28 @@ namespace ModMenu.NewTypes.ModRecording
         {
           //Main.Logger.Log($"SaveSlotModRecordView - disabled the ButtonEnable");
 
-          ButtonEnable.Interactable = false;
-          ButtonEnable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonEnableMissingDeactivated;
+          ButtonEnable!.Interactable = false;
+          ButtonEnable!.GetComponentInChildren<TextMeshProUGUI>().text = ButtonEnableMissingDeactivated;
         }
         else
         {
           //Main.Logger.Log($"SaveSlotModRecordView - enabled the ButtonEnable");
-          ButtonEnable.Interactable = true;
-          ButtonEnable.GetComponentInChildren<TextMeshProUGUI>().text = string.Format(ButtonEnableMissingDeactivated, saveSlot.DisabledMods);
+          ButtonEnable!.Interactable = true;
+          ButtonEnable!.GetComponentInChildren<TextMeshProUGUI>().text = string.Format(ButtonEnableMissingDeactivated, saveSlot.DisabledMods);
         }
 
         if (UnityModManager.ModEntries.Where(mod => mod.Enabled).Cast<object>().Concat(OwlcatModificationsManager.Instance.AppliedModifications.Cast<object>())
           .Any(entry => !saveSlot.AllMods.Any(mod => mod.mod == entry)))
         {
           //Main.Logger.Log($"SaveSlotModRecordView - enabled the ButtonDisable");
-          ButtonDisable.Interactable = true;
-          ButtonDisable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
+          ButtonDisable!.Interactable = true;
+          ButtonDisable!.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
         }
         else
         {
           //Main.Logger.Log($"SaveSlotModRecordView - disabled the ButtonDisable");
-          ButtonDisable.Interactable = false;
-          ButtonDisable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
+          ButtonDisable!.Interactable = false;
+          ButtonDisable!.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
         }
       }
     }
@@ -211,7 +211,7 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPostfix]
     static void SaveSlotView_BindViewImplementation_PatchToBindModRecordList(SaveLoadBaseView __instance)
     {
-      var go = __instance?.m_DetailedSaveSlotView.transform.Find(nameContainer)?.Find(nameRecordView);
+      var go = __instance.m_DetailedSaveSlotView.transform.Find(nameContainer)?.Find(nameRecordView);
       if (go == null)
       {
         Main.Logger.Error("SaveSlotModRecordView - failed to find the game object with the view! Will not bind.");
@@ -246,6 +246,8 @@ namespace ModMenu.NewTypes.ModRecording
       view.Unbind();
     }
 
+
+
     [HarmonyPatch(typeof(SaveLoadBaseView), nameof(SaveLoadBaseView.Initialize))]
     [HarmonyPrefix]
     static void SaveLoadView_Initialize_PatchToInjectModRecordView(SaveLoadBaseView __instance)
@@ -258,11 +260,11 @@ namespace ModMenu.NewTypes.ModRecording
         TMP_Settings.instance?.m_defaultFontAsset?.material;
       var fontAsset = TMP_Settings.instance?.m_defaultFontAsset;
 
+      bool isPcView = __instance.m_DetailedSaveSlotView is SaveSlotPCView;
       var _SaveSlotPCView = __instance.m_DetailedSaveSlotView as SaveSlotPCView;
-      bool isPcView = _SaveSlotPCView != null;
 
       var container = new GameObject(nameContainer, typeof(RectTransform));
-      var rectTransform = container.transform as RectTransform;
+      var rectTransform = (RectTransform) container.transform;
       rectTransform.SetParent(__instance.m_DetailedSaveSlotView.gameObject.transform, false);
       rectTransform.SetAsLastSibling();
       rectTransform.offsetMin = new(0.765f, 54.3735f);
@@ -279,7 +281,7 @@ namespace ModMenu.NewTypes.ModRecording
       }
 
       var recordView = new GameObject(nameRecordView, typeof(RectTransform));
-      var recordViewRectTrans = recordView.transform as RectTransform;
+      var recordViewRectTrans = (RectTransform) recordView.transform;
       recordViewRectTrans.SetParent(rectTransform, false);
       recordViewRectTrans.anchorMin = new Vector2(0, 0);
       recordViewRectTrans.anchorMax = new Vector2(0.6f, 1);
@@ -288,7 +290,7 @@ namespace ModMenu.NewTypes.ModRecording
       var modRecordView = recordView.AddComponent<SaveSlotModRecordView>();
 
       var modRecordVerticalGroup = new GameObject("modRecordVerticalGroup", typeof(RectTransform));
-      var modRecordVerticalGroupRectTrans = modRecordVerticalGroup.transform as RectTransform;
+      var modRecordVerticalGroupRectTrans = (RectTransform) modRecordVerticalGroup.transform;
       modRecordVerticalGroupRectTrans.SetParent(recordViewRectTrans, false);
       modRecordVerticalGroupRectTrans.anchorMin = new Vector2(0, 0.3f);
       modRecordVerticalGroupRectTrans.anchorMax = new Vector2(1, 1);
@@ -301,7 +303,7 @@ namespace ModMenu.NewTypes.ModRecording
       modVerGroup.childForceExpandHeight = false;
 
       var ModStuffHolder = new GameObject("ModStuffHolder", typeof(RectTransform));
-      var ModStuffHolderRectTrans = ModStuffHolder.transform as RectTransform;
+      var ModStuffHolderRectTrans = (RectTransform) ModStuffHolder.transform;
       ModStuffHolderRectTrans.SetParent(modRecordVerticalGroupRectTrans, false);
       ModStuffHolderRectTrans.anchorMin = new Vector2(0, 0);
       ModStuffHolderRectTrans.anchorMin = new Vector2(1, 1);
@@ -309,7 +311,7 @@ namespace ModMenu.NewTypes.ModRecording
       ModStuffHolderRectTrans.offsetMax = new Vector2(0, 0);
       ModStuffHolder.AddComponent<HorizontalLayoutGroupWorkaround>();
       var ModStuff = new GameObject("ModStuff", typeof(RectTransform));
-      var ModStuffRect = ModStuff.transform as RectTransform;
+      var ModStuffRect = (RectTransform) ModStuff.transform;
       ModStuffRect.SetParent(ModStuffHolderRectTrans, false);
       ModStuffRect.anchorMin = new Vector2(0f, 0f);
       ModStuffRect.anchorMax = new Vector2(1, 1);
@@ -343,7 +345,7 @@ namespace ModMenu.NewTypes.ModRecording
 
 
       var ExclusionsHolder = new GameObject("ExclusionsHolder", typeof(RectTransform));
-      var ExclusionsHolderRectTrans = ExclusionsHolder.transform as RectTransform;
+      var ExclusionsHolderRectTrans = (RectTransform)ExclusionsHolder.transform;
       ExclusionsHolderRectTrans.SetParent(modRecordVerticalGroupRectTrans, false);
       ExclusionsHolderRectTrans.anchorMin = new Vector2(0.0f, 0.0f);
       ExclusionsHolderRectTrans.anchorMax = new Vector2(1f, 1f);
@@ -352,7 +354,7 @@ namespace ModMenu.NewTypes.ModRecording
       ExclusionsHolder.AddComponent<HorizontalLayoutGroupWorkaround>();
 
       var Exclusions = new GameObject("Exclusions", typeof(RectTransform));
-      var ExclusionsRectTrans = Exclusions.transform as RectTransform;
+      var ExclusionsRectTrans = (RectTransform)Exclusions.transform;
       ExclusionsRectTrans.SetParent(ExclusionsHolderRectTrans, false);
       ExclusionsRectTrans.anchorMin = new Vector2(0, 0);
       ExclusionsRectTrans.anchorMax = new Vector2(1f, 1f);
@@ -385,87 +387,85 @@ namespace ModMenu.NewTypes.ModRecording
       ExclusionsSpriteRectTrans.offsetMax = new(0, 0);
       ExclusionsSprite.SetActive(true);
 
-      if (!isPcView)
-        goto AfterButtons;
-
-      var ModRecordButtons = new GameObject("ModRecordButtons", typeof(RectTransform));
-      var ModRecordButtonsRectTrans = ModRecordButtons.transform as RectTransform;
-      ModRecordButtonsRectTrans.SetParent(recordViewRectTrans, false);
-      ModRecordButtonsRectTrans.anchorMin = new Vector2(0, 0);
-      ModRecordButtonsRectTrans.anchorMax = new Vector2(1, 0.33f);
-      ModRecordButtonsRectTrans.offsetMin = new Vector2(0, 0);
-      ModRecordButtonsRectTrans.offsetMax = new Vector2(0, -4);
-      var ButtonsHorGroup = ModRecordButtons.AddComponent<HorizontalLayoutGroupWorkaround>();
-      ButtonsHorGroup.childAlignment = TextAnchor.LowerCenter;
-      ButtonsHorGroup.spacing = 10;
-
-      var ButtonPrototype = _SaveSlotPCView.m_DeleteButton;
-      var Button = Instantiate(ButtonPrototype);
-      modRecordView.ButtonEnable = Button;
-      var text = Button.GetComponentInChildren<TextMeshProUGUI>();
-      if (text != null)
+      if (isPcView)
       {
-        text.text = ButtonEnableMissingDeactivated;
-        text.enableAutoSizing = true;
-        text.fontSizeMin = 2;
-        text.margin = new Vector4(5, 5, 5, 5);
+        var ModRecordButtons = new GameObject("ModRecordButtons", typeof(RectTransform));
+        var ModRecordButtonsRectTrans = (RectTransform) ModRecordButtons.transform;
+        ModRecordButtonsRectTrans.SetParent(recordViewRectTrans, false);
+        ModRecordButtonsRectTrans.anchorMin = new Vector2(0, 0);
+        ModRecordButtonsRectTrans.anchorMax = new Vector2(1, 0.33f);
+        ModRecordButtonsRectTrans.offsetMin = new Vector2(0, 0);
+        ModRecordButtonsRectTrans.offsetMax = new Vector2(0, -4);
+        var ButtonsHorGroup = ModRecordButtons.AddComponent<HorizontalLayoutGroupWorkaround>();
+        ButtonsHorGroup.childAlignment = TextAnchor.LowerCenter;
+        ButtonsHorGroup.spacing = 10;
+
+        var ButtonPrototype = _SaveSlotPCView!.m_DeleteButton;
+        var Button = Instantiate(ButtonPrototype);
+        modRecordView.ButtonEnable = Button;
+        var text = Button.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+          text.text = ButtonEnableMissingDeactivated;
+          text.enableAutoSizing = true;
+          text.fontSizeMin = 2;
+          text.margin = new Vector4(5, 5, 5, 5);
+        }
+        Button.transform.SetParent(ModRecordButtonsRectTrans, false);
+        Button.m_OnLeftClick = new();
+        Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(true));
+        var sizeFitter = Button.gameObject.AddComponent<ContentSizeFitterExtended>();
+        sizeFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+        Button = Instantiate(ButtonPrototype);
+        modRecordView.ButtonDisable = Button;
+        text = Button.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+          text.text = ButtonDisableExtraDeactivated;
+          text.enableAutoSizing = true;
+          text.fontSizeMin = 2;
+          text.margin = new Vector4(5, 5, 5, 5);
+        }
+        Button.transform.SetParent(ModRecordButtonsRectTrans, false);
+        Button.m_OnLeftClick = new();
+        Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(false));
+        sizeFitter = Button.gameObject.AddComponent<ContentSizeFitterExtended>();
+        sizeFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+
+
+        var buttons = __instance.m_DetailedSaveSlotView.transform.Find("Info/Buttons")?.gameObject;
+        if (buttons == null)
+        {
+          Main.Logger.Error("SaveLoadView_Initialize_PatchToInjectModRecordView - failed to find the Buttons game object on the detailed save slot view");
+          return;
+        }
+        buttons.SetActive(false);
+
+
+        var oldHor = buttons.GetComponent<HorizontalLayoutGroupWorkaround>();
+        DestroyImmediate(oldHor);
+        try
+        {
+          var verGroup = buttons.AddComponent<VerticalLayoutGroupWorkaround>();
+          verGroup.DoWorkaround = false;
+          verGroup.spacing = 20;
+          verGroup.childAlignment = TextAnchor.MiddleCenter;
+        }
+        catch (Exception ex)
+        {
+          Main.Logger.LogException(ex);
+        }
+
+        var buttonsFitter = buttons.GetComponent<ContentSizeFitterExtended>();
+        buttonsFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+        buttonsFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+        var buttonsRectTransform = (RectTransform) buttons.transform;
+        buttonsRectTransform.anchorMin = new Vector2(0.6f, 0);
+        buttonsRectTransform.anchorMax = new Vector2(1, 1);
+        buttons.transform.SetParent(container.transform);
+        buttons.transform.SetAsLastSibling();
+        buttons.SetActive(true);
       }
-      Button.transform.SetParent(ModRecordButtonsRectTrans, false);
-      Button.m_OnLeftClick = new();
-      Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(true));
-      var sizeFitter = Button.gameObject.AddComponent<ContentSizeFitterExtended>();
-      sizeFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-      Button = Instantiate(ButtonPrototype);
-      modRecordView.ButtonDisable = Button;
-      text = Button.GetComponentInChildren<TextMeshProUGUI>();
-      if (text != null)
-      {
-        text.text = ButtonDisableExtraDeactivated;
-        text.enableAutoSizing = true;
-        text.fontSizeMin = 2;
-        text.margin = new Vector4(5, 5, 5, 5);
-      }
-      Button.transform.SetParent(ModRecordButtonsRectTrans, false);
-      Button.m_OnLeftClick = new();
-      Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(false));
-      sizeFitter = Button.gameObject.AddComponent<ContentSizeFitterExtended>();
-      sizeFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-
-
-      var buttons = __instance.m_DetailedSaveSlotView.transform.Find("Info/Buttons")?.gameObject;
-      if (buttons == null)
-      {
-        Main.Logger.Error("SaveLoadView_Initialize_PatchToInjectModRecordView - failed to find the Buttons game object on the detailed save slot view");
-        return;
-      }
-      buttons.SetActive(false);
-
-
-      var oldHor = buttons.GetComponent<HorizontalLayoutGroupWorkaround>();
-      DestroyImmediate(oldHor);
-      try
-      {
-        var verGroup = buttons.AddComponent<VerticalLayoutGroupWorkaround>();
-        verGroup.DoWorkaround = false;
-        verGroup.spacing = 20;
-        verGroup.childAlignment = TextAnchor.MiddleCenter;
-      }
-      catch (Exception ex)
-      {
-        Main.Logger.LogException(ex);
-      }
-
-      var buttonsFitter = buttons.GetComponent<ContentSizeFitterExtended>();
-      buttonsFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-      buttonsFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-      var buttonsRectTransform = buttons.transform as RectTransform;
-      buttonsRectTransform.anchorMin = new Vector2(0.6f, 0);
-      buttonsRectTransform.anchorMax = new Vector2(1, 1);
-      buttons.transform.SetParent(container.transform);
-      buttons.transform.SetAsLastSibling();
-      buttons.SetActive(true);
-
-    AfterButtons:;
 
       recordView.SetActive(true);
       container.SetActive(true);
@@ -489,7 +489,7 @@ namespace ModMenu.NewTypes.ModRecording
     {
       if (buttonType is not DialogMessageBoxBase.BoxButton.Yes)
         return;
-      var vm = (ViewModel as SaveSlotWithModListVM);
+      var vm = (SaveSlotWithModListVM)ViewModel;
       var m_owlmods = OwlcatModificationsManager.Instance.m_Settings.EnabledModifications;
       IEnumerable<string> OwlMods = m_owlmods;
       foreach (var mod in vm.AllMods.Where(m =>m.state == ModState.Disabled))
@@ -511,7 +511,7 @@ namespace ModMenu.NewTypes.ModRecording
               }
             case SaveInfoWithModList.ModRecord.ModType.OwlMod:
               {
-                var entry = mod.mod as OwlcatModification;
+                var entry = (OwlcatModification)mod.mod!;
                 SetOwlModSetting(OwlcatModificationsManager.Instance.m_Settings.EnabledModifications.Concat(entry.Manifest.UniqueName).ToArray());
                 entry.Apply();
                 OwlMods = OwlMods.Concat(entry.Manifest.UniqueName);
@@ -531,7 +531,7 @@ namespace ModMenu.NewTypes.ModRecording
     {
       if (buttonType is not DialogMessageBoxBase.BoxButton.Yes)
         return;
-      var vm = (ViewModel as SaveSlotWithModListVM);
+      var vm = (SaveSlotWithModListVM)ViewModel;
       foreach (var mod in UnityModManager.ModEntries)
       {
         bool inRecord = vm.UMMMods.Concat(vm.Exclusions.Where(m => m.record.modType is SaveInfoWithModList.ModRecord.ModType.UmmMod)).Any(m => m.record.Id == mod.Info.Id);

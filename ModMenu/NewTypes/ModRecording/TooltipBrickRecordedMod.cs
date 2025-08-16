@@ -60,9 +60,9 @@ namespace ModMenu.NewTypes.ModRecording
   internal class TooltipBrickRecordedModView : TooltipBaseBrickView<TooltipBrickRecordedModVM>
   {
     [SerializeField]
-    public TextMeshProUGUI m_Text;
+    public TextMeshProUGUI m_Text = null!;
     [SerializeField]
-    public Image m_Image;
+    public Image m_Image = null!;
 
     internal static TooltipBrickRecordedModView config
     {
@@ -73,7 +73,7 @@ namespace ModMenu.NewTypes.ModRecording
         return m_config;
       }
     }
-    static TooltipBrickRecordedModView m_config;
+    static TooltipBrickRecordedModView? m_config;
     static TooltipBrickRecordedModView()
     {
     }
@@ -111,7 +111,7 @@ namespace ModMenu.NewTypes.ModRecording
       view.m_Text = text;
       go.SetActive(true);
       go = new GameObject("Image", typeof(RectTransform));
-      var t = go.transform as RectTransform;
+      var t = (RectTransform)go.transform;
       t.anchorMin = new(1.05f, 0.05f);
       t.anchorMax = new(1.05f, 0.95f);
       t.offsetMin = new(24, 0);

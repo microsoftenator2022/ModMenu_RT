@@ -2,12 +2,13 @@
 	<Import Project="GamePath.props" Condition="Exists('GamePath.props')" />
 
   <PropertyGroup>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
     <TargetFramework>net481</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>ModMenu_RT</AssemblyName>
     <RootNamespace>ModMenu</RootNamespace>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
     <RogueTraderData>$(LocalAppData)Low\Owlcat Games\Warhammer 40000 Rogue Trader</RogueTraderData>
   </PropertyGroup>
 

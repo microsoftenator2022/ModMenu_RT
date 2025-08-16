@@ -23,7 +23,7 @@ namespace ModMenu.NewTypes.ModRecording
 
     TooltipTemplateModRecordEnum DependencyFilter;
     //SaveSlotModRecordView View;
-    SaveSlotWithModListVM saveSlotWithModListVM;
+    SaveSlotWithModListVM? saveSlotWithModListVM;
 
     internal TooltipTemplateModRecord(TooltipTemplateModRecordEnum noDep, SaveSlotModRecordView component)
     {

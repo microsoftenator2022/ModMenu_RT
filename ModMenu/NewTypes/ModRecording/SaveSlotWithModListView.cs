@@ -30,12 +30,15 @@ namespace ModMenu.NewTypes.ModRecording
     public const string modOrangeMarkName = "modOrangeMark";
     public const string modRedMarkName = "modRedMark";
 
-    static UnityEngine.GameObject originalPrefab = null;
-    static SaveSlotWithModListPCView m_config_PC;
-    static SaveSlotWithModListConsoleView m_config_Console;
+    static UnityEngine.GameObject? originalPrefab = null;
+    static SaveSlotWithModListPCView? m_config_PC = null!;
+    static SaveSlotWithModListConsoleView? m_config_Console = null!;
 
     internal static void UpdateModStateIndicator(this ISaveSlotWithModListView instance, ModRecordState state)
     {
+      if (instance.RedMark == null || instance.OrangeMark == null || instance.GreenMark == null)
+        return;
+
       if (state is ModRecordState.NoMods)
       {
         instance.RedMark.SetActive(false);
@@ -86,35 +89,35 @@ namespace ModMenu.NewTypes.ModRecording
         newUntypedPrefab.gameObject.name = "SaveSlotWithModListView";
         UnityEngine.Object.DestroyImmediate(a);
         GameObject.DontDestroyOnLoad(newUntypedPrefab.gameObject);
-        var newPrefab = newUntypedPrefab as ISaveSlotWithModListView;
+        var newPrefab = (ISaveSlotWithModListView)newUntypedPrefab;
         var Pic = newUntypedPrefab.transform.Find("Picture");
         var QuickMark = Pic.Find("QuickSaveMark");
         var Mark = GameObject.Instantiate(QuickMark, Pic, false);
         Mark.name = modGreenMarkName;
-        var newMarkTransform = Mark as RectTransform;
+        var newMarkTransform = (RectTransform)Mark;
         newMarkTransform.offsetMin = new Vector2(newMarkTransform.offsetMin.x + 138, newMarkTransform.offsetMin.y);
         newMarkTransform.offsetMax = new Vector2(newMarkTransform.offsetMax.x + 138, newMarkTransform.offsetMax.y);
-        newMarkTransform.sizeDelta = (QuickMark.transform as RectTransform).sizeDelta;
+        newMarkTransform.sizeDelta = ((RectTransform)QuickMark.transform).sizeDelta;
         Mark.GetComponent<Image>().sprite = IconOk;
         newPrefab.GreenMark = Mark.gameObject;
 
         Mark = GameObject.Instantiate(QuickMark, Pic, false);
         Mark.name = modOrangeMarkName;
-        newMarkTransform = Mark as RectTransform;
+        newMarkTransform = (RectTransform)Mark;
         newMarkTransform.SetParent(Pic);
         newMarkTransform.offsetMin = new Vector2(newMarkTransform.offsetMin.x + 138, newMarkTransform.offsetMin.y);
         newMarkTransform.offsetMax = new Vector2(newMarkTransform.offsetMax.x + 138, newMarkTransform.offsetMax.y);
-        newMarkTransform.sizeDelta = (QuickMark.transform as RectTransform).sizeDelta;
+        newMarkTransform.sizeDelta = ((RectTransform)QuickMark.transform).sizeDelta;
         Mark.GetComponent<Image>().sprite = IconNew;
         newPrefab.OrangeMark = Mark.gameObject;
 
         Mark = GameObject.Instantiate(QuickMark, Pic, false);
         Mark.name = modRedMarkName;
-        newMarkTransform = Mark as RectTransform;
+        newMarkTransform = (RectTransform)Mark;
         newMarkTransform.SetParent(Pic);
         newMarkTransform.offsetMin = new Vector2(newMarkTransform.offsetMin.x + 138, newMarkTransform.offsetMin.y);
         newMarkTransform.offsetMax = new Vector2(newMarkTransform.offsetMax.x + 138, newMarkTransform.offsetMax.y);
-        newMarkTransform.sizeDelta = (QuickMark.transform as RectTransform).sizeDelta;
+        newMarkTransform.sizeDelta = ((RectTransform)QuickMark.transform).sizeDelta;
         Mark.GetComponent<Image>().sprite = IconFailure;
         newPrefab.RedMark = Mark.gameObject;
         if (newUntypedPrefab is SaveSlotWithModListPCView pcView)
@@ -158,7 +161,7 @@ namespace ModMenu.NewTypes.ModRecording
           var list = new IVirtualListElementView[Index + 1];
           for (var i = 0; i < Index; i++)
             list[i] = fabric.m_Prefabs[i];
-          var oldPrefab = fabric.m_Prefabs[fabric.m_Indices[anotherCode]] as SaveSlotBaseView;
+          var oldPrefab = (SaveSlotBaseView) fabric.m_Prefabs[fabric.m_Indices[anotherCode]];
           SaveSlotBaseView newPrefab = UnityEngine.Object.Instantiate(TryGetConfig(oldPrefab));
 
           list[Index] = newPrefab;
@@ -217,26 +220,26 @@ namespace ModMenu.NewTypes.ModRecording
   internal interface ISaveSlotWithModListView
   {
     [SerializeField]
-    GameObject GreenMark { get; set; }
+    GameObject? GreenMark { get; set; }
     [SerializeField]
-    GameObject OrangeMark { get; set; }
+    GameObject? OrangeMark { get; set; }
     [SerializeField]
-    GameObject RedMark { get; set; }
+    GameObject? RedMark { get; set; }
 
     internal SaveSlotWithModListVM saveSlotWithModListVM { get; set; }
     internal abstract void UpdateModStateIndicator(ModRecordState state);
   }
   internal class SaveSlotWithModListPCView : SaveSlotPCView, ISaveSlotWithModListView
   {
-    public GameObject GreenMark { get { return _greenMark; } set { _greenMark = value; } }
+    public GameObject? GreenMark { get { return _greenMark; } set { _greenMark = value; } }
     [SerializeField]
-    GameObject _greenMark; 
-    public GameObject OrangeMark { get { return _orangeMark; } set { _orangeMark = value; } }
+    GameObject? _greenMark; 
+    public GameObject? OrangeMark { get { return _orangeMark; } set { _orangeMark = value; } }
     [SerializeField]
-    GameObject _orangeMark;
-    public GameObject RedMark { get { return _redMark; } set { _redMark = value; } }
+    GameObject? _orangeMark;
+    public GameObject? RedMark { get { return _redMark; } set { _redMark = value; } }
     [SerializeField]
-    GameObject _redMark;
+    GameObject? _redMark;
     public SaveSlotWithModListVM saveSlotWithModListVM
     {
       get
@@ -289,17 +292,19 @@ namespace ModMenu.NewTypes.ModRecording
       }
     }
   }
+  
+  [HarmonyPatch(typeof(SaveSlotConsoleView))]
   internal class SaveSlotWithModListConsoleView : SaveSlotConsoleView, ISaveSlotWithModListView, IFunc02ClickHandler
   {
-    public GameObject GreenMark { get { return _greenMark; } set { _greenMark = value; } }
+    public GameObject? GreenMark { get { return _greenMark; } set { _greenMark = value; } }
     [SerializeField]
-    GameObject _greenMark;
-    public GameObject OrangeMark { get { return _orangeMark; } set { _orangeMark = value; } }
+    GameObject? _greenMark;
+    public GameObject? OrangeMark { get { return _orangeMark; } set { _orangeMark = value; } }
     [SerializeField]
-    GameObject _orangeMark;
-    public GameObject RedMark { get { return _redMark; } set { _redMark = value; } }
+    GameObject? _orangeMark;
+    public GameObject? RedMark { get { return _redMark; } set { _redMark = value; } }
     [SerializeField]
-    GameObject _redMark;
+    GameObject? _redMark;
     public SaveSlotWithModListVM saveSlotWithModListVM
     {
       get
@@ -352,19 +357,32 @@ namespace ModMenu.NewTypes.ModRecording
       }
     }
 
-    public bool CanFunc02Click()
+    [HarmonyPatch(nameof(SaveSlotConsoleView.CanFunc02Click))]
+    [HarmonyPostfix]
+    public static bool CanFunc02Click(bool __result, SaveSlotConsoleView __instance)
     {
-      return saveSlotWithModListVM != null && saveSlotWithModListVM.AllMods.Any();
+      if (__instance is SaveSlotWithModListConsoleView view)
+        return view.saveSlotWithModListVM != null && view.saveSlotWithModListVM.AllMods.Any();
+
+      return __result;
     }
 
-    public string GetFunc02ClickHint()
+    [HarmonyPatch(nameof(SaveSlotConsoleView.GetFunc02ClickHint))]
+    [HarmonyPostfix]
+    public static string GetFunc02ClickHint(string __result, SaveSlotConsoleView __instance)
     {
-      return "GetFunc02ClickHintTest";
+      if (__instance is SaveSlotWithModListConsoleView)
+        return "GetFunc02ClickHintTest";
+
+      return __result;
     }
 
-    public void OnFunc02Click()
+    [HarmonyPatch(nameof(SaveSlotConsoleView.OnFunc02Click))]
+    [HarmonyPostfix]
+    public static void OnFunc02Click(SaveSlotConsoleView __instance)
     {
-      EventBus.RaiseEvent((ITooltipHandler h) => h.HandleInfoRequest(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.All, this)), true);
+      if (__instance is SaveSlotWithModListConsoleView @this)
+        EventBus.RaiseEvent((ITooltipHandler h) => h.HandleInfoRequest(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.All, @this)), true);
     }
 
   }
