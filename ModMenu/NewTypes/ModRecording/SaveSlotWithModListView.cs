@@ -7,17 +7,20 @@ using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
 using Kingmaker.PubSubSystem;
-using Kingmaker.UI.MVVM._ConsoleView.SaveLoad;
-using Kingmaker.UI.MVVM._PCView.SaveLoad;
-using Kingmaker.UI.MVVM._VM.SaveLoad;
+using Kingmaker.Code.UI.MVVM.View.SaveLoad.Console;
+using Kingmaker.Code.UI.MVVM.View.SaveLoad.PC;
+using Kingmaker.Code.UI.MVVM.VM.SaveLoad;
+using Kingmaker.Code.UI.MVVM.View.SaveLoad.Base;
 using Owlcat.Runtime.UI.ConsoleTools.ClickHandlers;
 using Owlcat.Runtime.UI.VirtualListSystem;
+using Kingmaker.PubSubSystem.Core;
 using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 using static ModMenu.NewTypes.ModRecording.SaveSlotWithModListVM;
 using static ModMenu.NewTypes.ModRecording.StringsAndIcons;
 using static ModMenu.NewTypes.ModRecording.TooltipTemplateModRecord;
+using Kingmaker.Utility.UnityExtensions;
 
 namespace ModMenu.NewTypes.ModRecording
 {
@@ -27,6 +30,7 @@ namespace ModMenu.NewTypes.ModRecording
     public const string modOrangeMarkName = "modOrangeMark";
     public const string modRedMarkName = "modRedMark";
 
+    static UnityEngine.GameObject originalPrefab = null;
     static SaveSlotWithModListPCView m_config_PC;
     static SaveSlotWithModListConsoleView m_config_Console;
 
@@ -57,17 +61,29 @@ namespace ModMenu.NewTypes.ModRecording
         instance.GreenMark.SetActive(false);
       }
     }
-    internal static SaveSlotView TryGetConfig(SaveSlotView oldPrefab)
+    internal static SaveSlotBaseView TryGetConfig(SaveSlotBaseView oldPrefab)
     {
-      if (oldPrefab is SaveSlotConsoleView && m_config_Console != null)
-        return m_config_Console; 
-      else if (oldPrefab is SaveSlotPCView && m_config_PC != null)
-        return m_config_PC; 
       try
       {
+        if (originalPrefab == null)
+        {
+          if (m_config_Console != null)
+            UnityEngine.Object.Destroy(m_config_Console.gameObject);
+          if (m_config_PC != null)
+            UnityEngine.Object.Destroy(m_config_PC.gameObject);
+          goto nullPrefab;
+        }
+
+        if (oldPrefab is SaveSlotConsoleView && m_config_Console != null)
+          return m_config_Console; 
+        else if (oldPrefab is SaveSlotPCView && m_config_PC != null)
+          return m_config_PC; 
+
+        nullPrefab:
         var a = GameObject.Instantiate(oldPrefab);
-        SaveSlotView newUntypedPrefab = oldPrefab is SaveSlotConsoleView ? a.gameObject.AddComponent<SaveSlotWithModListConsoleView>() : a.gameObject.AddComponent<SaveSlotWithModListPCView>();
+        SaveSlotBaseView newUntypedPrefab = oldPrefab is SaveSlotConsoleView ? a.gameObject.AddComponent<SaveSlotWithModListConsoleView>() : a.gameObject.AddComponent<SaveSlotWithModListPCView>();
         MemberWiseCloneView(newUntypedPrefab, a);
+        newUntypedPrefab.gameObject.name = "SaveSlotWithModListView";
         UnityEngine.Object.DestroyImmediate(a);
         GameObject.DontDestroyOnLoad(newUntypedPrefab.gameObject);
         var newPrefab = newUntypedPrefab as ISaveSlotWithModListView;
@@ -101,7 +117,6 @@ namespace ModMenu.NewTypes.ModRecording
         newMarkTransform.sizeDelta = (QuickMark.transform as RectTransform).sizeDelta;
         Mark.GetComponent<Image>().sprite = IconFailure;
         newPrefab.RedMark = Mark.gameObject;
-        Main.Logger.Log($"TryGetConfig - 4");
         if (newUntypedPrefab is SaveSlotWithModListPCView pcView)
           { m_config_PC = pcView; Main.Logger.Log("Generated SaveSlotWithModListPCView config"); }
         else if (newUntypedPrefab is SaveSlotWithModListConsoleView consoleView)
@@ -114,14 +129,17 @@ namespace ModMenu.NewTypes.ModRecording
       catch (Exception ex)
       {
         Main.Logger.LogException(ex);
+        originalPrefab = oldPrefab.gameObject;
         return oldPrefab;
       }
 
     }
-    static void MemberWiseCloneView(SaveSlotView newPrefab, SaveSlotView oldPrefab)
+    static void MemberWiseCloneView(SaveSlotBaseView newPrefab, SaveSlotBaseView oldPrefab)
     {
-      foreach (var field in oldPrefab.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Concat(typeof(SaveSlotView).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)))
+      foreach (var field in oldPrefab.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Concat(typeof(SaveSlotBaseView).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)))
+      {
         field.SetValue(newPrefab, field.GetValue(oldPrefab));
+      }
     }
     [HarmonyPatch]
     static class FixVirtualListfabricIndices
@@ -140,8 +158,8 @@ namespace ModMenu.NewTypes.ModRecording
           var list = new IVirtualListElementView[Index + 1];
           for (var i = 0; i < Index; i++)
             list[i] = fabric.m_Prefabs[i];
-          var oldPrefab = fabric.m_Prefabs[fabric.m_Indices[anotherCode]] as SaveSlotView;
-          SaveSlotView newPrefab = TryGetConfig(oldPrefab);
+          var oldPrefab = fabric.m_Prefabs[fabric.m_Indices[anotherCode]] as SaveSlotBaseView;
+          SaveSlotBaseView newPrefab = UnityEngine.Object.Instantiate(TryGetConfig(oldPrefab));
 
           list[Index] = newPrefab;
           fabric.m_Prefabs = list;

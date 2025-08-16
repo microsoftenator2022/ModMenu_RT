@@ -1,9 +1,9 @@
 ﻿using HarmonyLib;
 using JetBrains.Annotations;
 using Kingmaker.Localization;
-using Kingmaker.UI.MVVM._PCView.Settings.Menu;
-using Kingmaker.UI.MVVM._VM.Settings;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Menu;
+using Kingmaker.Code.UI.MVVM.VM.Settings;
+using Kingmaker.UI.Models.SettingsUI;
 using Kingmaker.Utility;
 using ModMenu.NewTypes;
 using System;
@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Kingmaker.Utility.DotNetExtensions;
 
 namespace ModMenu.Settings
 {

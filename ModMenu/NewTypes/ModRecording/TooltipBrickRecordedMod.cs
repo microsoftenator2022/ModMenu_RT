@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Kingmaker.UI.MVVM._PCView.Tooltip.Bricks;
-using Kingmaker.UI.MVVM._VM.Tooltip.Utils;
+using Kingmaker.Code.UI.MVVM.View.Tooltip.Bricks;
+using Kingmaker.Code.UI.MVVM.VM.Tooltip.Utils;
 using Owlcat.Runtime.UI.Tooltips;
 using TMPro;
 using UnityEngine;
@@ -81,7 +81,7 @@ namespace ModMenu.NewTypes.ModRecording
     public override void BindViewImplementation()
     {
       m_Text.text = $"{ViewModel.mod.DisplayName} (version {ViewModel.mod.record.Version}).";
-      m_Text.fontSize = 21 * SettingsRoot.Game.Main.FontSize + 2;
+      m_Text.fontSize = 21 * SettingsRoot.Accessiability.m_FontSize.GetValue() + 2;
       m_Image.sprite = (ViewModel.mod.state) switch
       {
         > ModState.Outdated => IconGreenCheckmark,

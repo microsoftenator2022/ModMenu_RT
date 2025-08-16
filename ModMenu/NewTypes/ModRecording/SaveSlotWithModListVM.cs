@@ -8,7 +8,7 @@ using System.Reflection.Emit;
 using UniRx;
 using HarmonyLib;
 using Kingmaker.EntitySystem.Persistence;
-using Kingmaker.UI.MVVM._VM.SaveLoad;
+using Kingmaker.Code.UI.MVVM.VM.SaveLoad;
 using Kingmaker.Utility;
 using UnityModManagerNet;
 using static UnityModManagerNet.UnityModManager;
@@ -46,8 +46,8 @@ namespace ModMenu.NewTypes.ModRecording
     internal SaveSlotModRecordView BoundModRecordView;
 
 
-    public SaveSlotWithModListVM(SaveInfo saveInfo, IReadOnlyReactiveProperty<SaveLoadMode> mode, Action<SaveInfo> saveOrLoadAction, Action<SaveInfo> deleteAction)
-      : base(saveInfo, mode, saveOrLoadAction, deleteAction)
+    public SaveSlotWithModListVM(SaveInfo saveInfo, IReadOnlyReactiveProperty<SaveLoadMode> mode, SaveLoadActions saveLoadActions, bool allowSwitchOff = false)
+      : base(saveInfo, mode, saveLoadActions, allowSwitchOff)
     {
 
       if (saveInfo is not SaveInfoWithModList save)
@@ -135,8 +135,8 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyTargetMethods]
     static IEnumerable<MethodInfo> TargetMethods()
     {
-      yield return typeof(SaveLoadVM).GetMethod(nameof(SaveLoadVM.UpdateSavesCollection), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-      var toybox = UnityModManager.modEntries.FirstOrDefault(mod => mod.Info.Id.Contains("ToyBox"))?.Assembly;
+      yield return typeof(SaveLoadVM).GetMethod(nameof(SaveLoadVM.HandleSaveListUpdate), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+      var toybox = UnityModManager.ModEntries.FirstOrDefault(mod => mod.Info.Id.Contains("ToyBox"))?.Assembly;
       if (toybox != null)
       {
         Main.Logger.Log("Detected toybox, will try to add SaveLoadViews.SaveLoadVMPatch.UpdateSavesCollection method to patches"); // it's a bool Prefix that skips the original >_<
@@ -155,7 +155,7 @@ namespace ModMenu.NewTypes.ModRecording
         Main.Logger.Log($"Detected toybox NOT.");
     }
 
-    //[HarmonyPatch(typeof(SaveLoadVM), nameof(SaveLoadVM.UpdateSavesCollection))]
+    //[HarmonyPatch(typeof(SaveLoadVM), nameof(SaveLoadVM.HandleSaveListUpdate))]
     [HarmonyTranspiler]
     static IEnumerable<CodeInstruction> SaveLoadVM_UpdateSavesCollection_PatchToConstructSlotsWithModRecord(IEnumerable<CodeInstruction> instructions)
     {

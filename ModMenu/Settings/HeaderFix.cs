@@ -1,4 +1,5 @@
 ﻿using Kingmaker.PubSubSystem;
+using Kingmaker.PubSubSystem.Core;
 using Kingmaker;
 using UnityEngine;
 using Kingmaker.Utility;

@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Kingmaker.Modding;
-using Kingmaker.PubSubSystem;
+using Kingmaker.PubSubSystem.Core;
+using Kingmaker.PubSubSystem.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ using static UnityModManagerNet.UnityModManager;
 
 namespace ModMenu.NewTypes.ModRecording
 {
-  internal interface ISubscriberToModStateChange : IGlobalSubscriber
+  internal interface ISubscriberToModStateChange : ISubscriber
   {
     abstract public void OnUMMModStateChanged(ModEntry entry, bool IsBatch);
     abstract public void OnOMMModStateChanged(string entry, bool IsBatch);

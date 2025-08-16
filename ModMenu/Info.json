@@ -1,10 +1,10 @@
 ﻿{
   "Id": "ModMenu",
-  "DisplayName": "ModMenu",
+  "DisplayName": "ModMenu_RT",
   "Author": "WittleWolfie",
   "Version": "2.3.2",
   "ManagerVersion": "0.21.3",
-  "AssemblyName": "ModMenu.dll",
+  "AssemblyName": "ModMenu_RT.dll",
   "EntryMethod": "ModMenu.Main.Load",
   "Requirements": [],
   "LoadAfter": [ "MewsiferConsole.Mod" ]

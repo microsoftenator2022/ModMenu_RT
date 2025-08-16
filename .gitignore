@@ -351,3 +351,4 @@ MigrationBackup/
 
 # Local Files
 lib/**
+/ModMenu/GamePath.props

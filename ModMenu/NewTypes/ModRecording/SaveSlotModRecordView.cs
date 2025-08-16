@@ -8,19 +8,23 @@ using System.Threading.Tasks;
 using HarmonyLib;
 using JetBrains.Annotations;
 using Kingmaker.Modding;
-using Kingmaker.PubSubSystem;
-using Kingmaker.UI;
+using Kingmaker.PubSubSystem.Core;
+using Kingmaker.UI.Workarounds;
 using Kingmaker.UI.Common;
-using Kingmaker.UI.MVVM._ConsoleView.SaveLoad;
-using Kingmaker.UI.MVVM._PCView.SaveLoad;
-using Kingmaker.UI.MVVM._VM.SaveLoad;
-using Kingmaker.UI.MVVM._VM.Tooltip.Utils;
-using Kingmaker.Utility;
+using Kingmaker.UI.MVVM.View.SaveLoad.Base;
+using Kingmaker.Utility.NewtonsoftJson;
+using Kingmaker.Utility.DotNetExtensions;
+using Kingmaker.Utility.Serialization;
 using Owlcat.Runtime.UI.ConsoleTools;
 using Owlcat.Runtime.UI.ConsoleTools.HintTool;
 using Owlcat.Runtime.UI.Controls.Button;
 using Owlcat.Runtime.UI.Controls.Selectable;
 using Owlcat.Runtime.UI.MVVM;
+using Kingmaker.Code.UI.MVVM.View.SaveLoad.PC;
+using Kingmaker.Code.UI.MVVM.View.SaveLoad.Console;
+using Kingmaker.Code.UI.MVVM.VM.MessageBox;
+using Kingmaker.Code.UI.MVVM.VM.SaveLoad;
+using Kingmaker.Code.UI.MVVM.VM.Tooltip.Utils;
 using Owlcat.Runtime.UniRx;
 using Rewired;
 using TMPro;
@@ -33,6 +37,7 @@ using static ModMenu.NewTypes.ModRecording.TooltipTemplateModRecord;
 
 namespace ModMenu.NewTypes.ModRecording
 {
+  //AAAAAAAAAAa
   [HarmonyPatch]
   internal partial class SaveSlotModRecordView : ViewBase<SaveSlotVM>
   {
@@ -69,18 +74,19 @@ namespace ModMenu.NewTypes.ModRecording
       TooltipNoDep.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.NoDependency, this));
     }
 
-    [HarmonyPatch(typeof(SaveLoadConsoleView), nameof(SaveLoadConsoleView.CreateInput))]
-    [HarmonyPostfix]
+    //AAAAAAAAAAAAAaaaa
+    //[HarmonyPatch(typeof(SaveLoadConsoleView), nameof(SaveLoadConsoleView.CreateInput))]
+    //[HarmonyPostfix]
     static void AddModMenuRecordWidgetsForSaveLoadScreen(SaveLoadConsoleView __instance)
     {
       var collection = __instance.SlotCollectionView;
-      collection.AddDisposable(__instance.m_HintsWidget.BindHint(__instance.m_InputLayer.AddButton(
-        delegate (InputActionEventData _) { },
-        11,
-        collection.m_HasSlot.And(collection.NavigationBehaviour.DeepestFocusAsObservable.Select(HasMods)).ToReactiveProperty(), 
-        InputActionEventType.ButtonJustPressed),
-        ShowModListTooltipHintName,
-        ConsoleHintsWidget.HintPosition.Right));
+      //collection.AddDisposable(__instance.m_CommonHintsWidget.BindHint(__instance.m_InputLayer.AddButton(
+      //  delegate (InputActionEventData _) { },
+      //  11,
+      //  collection.m_HasSlot.And(collection.NavigationBehaviour.DeepestFocusAsObservable.Select(HasMods)).ToReactiveProperty(), 
+      //  InputActionEventType.ButtonJustPressed),
+      //  ShowModListTooltipHintName,
+      //  ConsoleHintsWidget.HintPosition.Right));
     }
 
     static bool HasMods(IConsoleEntity entity)
@@ -104,8 +110,7 @@ namespace ModMenu.NewTypes.ModRecording
 
     internal void Refresh()
     {
-      //AAAAAAAAAAAAAAAAAAAAAAAAA
-      //Main.Logger.Log($"SaveSlotModRecordView run Refresh");
+      Main.Logger.Log($"SaveSlotModRecordView run Refresh");
       var saveSlot = ViewModel as SaveSlotWithModListVM;
       var totalMods = saveSlot.OwlMods.Count + saveSlot.UMMMods.Count + saveSlot.OtherMods.Count;
       bool Console = ButtonEnable == null || ButtonDisable == null;
@@ -186,7 +191,7 @@ namespace ModMenu.NewTypes.ModRecording
           ButtonEnable.GetComponentInChildren<TextMeshProUGUI>().text = string.Format(ButtonEnableMissingDeactivated, saveSlot.DisabledMods);
         }
 
-        if (UnityModManager.modEntries.Where(mod => mod.Enabled).Cast<object>().Concat(OwlcatModificationsManager.Instance.AppliedModifications.Cast<object>())
+        if (UnityModManager.ModEntries.Where(mod => mod.Enabled).Cast<object>().Concat(OwlcatModificationsManager.Instance.AppliedModifications.Cast<object>())
           .Any(entry => !saveSlot.AllMods.Any(mod => mod.mod == entry)))
         {
           //Main.Logger.Log($"SaveSlotModRecordView - enabled the ButtonDisable");
@@ -202,9 +207,9 @@ namespace ModMenu.NewTypes.ModRecording
       }
     }
 
-    [HarmonyPatch(typeof(SaveLoadView), nameof(SaveLoadView.BindViewImplementation))]
+    [HarmonyPatch(typeof(SaveLoadBaseView), nameof(SaveLoadBaseView.BindViewImplementation))]
     [HarmonyPostfix]
-    static void SaveSlotView_BindViewImplementation_PatchToBindModRecordList(SaveLoadView __instance)
+    static void SaveSlotView_BindViewImplementation_PatchToBindModRecordList(SaveLoadBaseView __instance)
     {
       var go = __instance?.m_DetailedSaveSlotView.transform.Find(nameContainer)?.Find(nameRecordView);
       if (go == null)
@@ -221,9 +226,9 @@ namespace ModMenu.NewTypes.ModRecording
       __instance.AddDisposable(__instance.ViewModel.SelectedSaveSlot.Subscribe(view.Bind));
     }
 
-    [HarmonyPatch(typeof(SaveLoadView), nameof(SaveLoadView.DestroyViewImplementation))]
+    [HarmonyPatch(typeof(SaveLoadBaseView), nameof(SaveLoadBaseView.DestroyViewImplementation))]
     [HarmonyPostfix]
-    static void SaveSlotView_BindViewImplementation_PatchToUnbindModRecordList(SaveLoadView __instance)
+    static void SaveSlotView_BindViewImplementation_PatchToUnbindModRecordList(SaveLoadBaseView __instance)
     {
       var go = __instance?.m_DetailedSaveSlotView.transform.Find(nameContainer)?.Find(nameRecordView);
       if (go == null)
@@ -241,9 +246,9 @@ namespace ModMenu.NewTypes.ModRecording
       view.Unbind();
     }
 
-    [HarmonyPatch(typeof(SaveLoadView), nameof(SaveLoadView.Initialize))]
+    [HarmonyPatch(typeof(SaveLoadBaseView), nameof(SaveLoadBaseView.Initialize))]
     [HarmonyPrefix]
-    static void SaveLoadView_Initialize_PatchToInjectModRecordView(SaveLoadView __instance)
+    static void SaveLoadView_Initialize_PatchToInjectModRecordView(SaveLoadBaseView __instance)
     {
       //Stopwatch watch = Stopwatch.StartNew();
       if (__instance.transform.Find(nameContainer) != null)
@@ -474,15 +479,15 @@ namespace ModMenu.NewTypes.ModRecording
     {
       UIUtility.ShowMessageBox(
         WarningText,
-        MessageModalBase.ModalType.Dialog,
-        Enable? new Action<MessageModalBase.ButtonType>(TryEnableMissingMods) : new Action<MessageModalBase.ButtonType>(TryDisableExtraMods),
+        DialogMessageBoxBase.BoxType.Dialog,
+        Enable? new Action<DialogMessageBoxBase.BoxButton>(TryEnableMissingMods) : new Action<DialogMessageBoxBase.BoxButton>(TryDisableExtraMods),
         yesLabel: ButtonProсeed,
         noLabel: ButtonCancel);
     }
 
-    void TryEnableMissingMods(MessageModalBase.ButtonType buttonType)
+    void TryEnableMissingMods(DialogMessageBoxBase.BoxButton buttonType)
     {
-      if (buttonType is not MessageModalBase.ButtonType.Yes)
+      if (buttonType is not DialogMessageBoxBase.BoxButton.Yes)
         return;
       var vm = (ViewModel as SaveSlotWithModListVM);
       var m_owlmods = OwlcatModificationsManager.Instance.m_Settings.EnabledModifications;
@@ -522,12 +527,12 @@ namespace ModMenu.NewTypes.ModRecording
       }
     }
 
-    void TryDisableExtraMods(MessageModalBase.ButtonType buttonType)
+    void TryDisableExtraMods(DialogMessageBoxBase.BoxButton buttonType)
     {
-      if (buttonType is not MessageModalBase.ButtonType.Yes)
+      if (buttonType is not DialogMessageBoxBase.BoxButton.Yes)
         return;
       var vm = (ViewModel as SaveSlotWithModListVM);
-      foreach (var mod in UnityModManager.modEntries)
+      foreach (var mod in UnityModManager.ModEntries)
       {
         bool inRecord = vm.UMMMods.Concat(vm.Exclusions.Where(m => m.record.modType is SaveInfoWithModList.ModRecord.ModType.UmmMod)).Any(m => m.record.Id == mod.Info.Id);
         if (mod.Enabled && !inRecord)
@@ -569,25 +574,15 @@ namespace ModMenu.NewTypes.ModRecording
       {
         settingsOld.GetType().GetField(nameof(OwlcatModificationsManager.SettingsData.EnabledModifications)).SetValue(settingsOld, ModsRenewed);
       }
-      catch (Exception _)
+      catch (Exception)
       {
         Main.Logger.Error("Failed to assign OwlMod list when disabling mods");
       }
       try
       {
-        if (File.Exists(OwlcatModificationsManager.SettingsFilePath))
-        {
-          NewtonsoftJsonHelper.SerializeToFile(OwlcatModificationsManager.SettingsFilePath, settingsOld, true);
-        }
-        else if (File.Exists(OwlcatModificationsManager.SettingsFilePathObsolete))
-        {
-          NewtonsoftJsonHelper.SerializeToFile(OwlcatModificationsManager.SettingsFilePathObsolete, settingsOld, true);
-        }
-        else
-        {
-          File.Create(OwlcatModificationsManager.SettingsFilePath);
-          NewtonsoftJsonHelper.SerializeToFile(OwlcatModificationsManager.SettingsFilePath, settingsOld, true);
-        }
+        
+        JsonExtensions.SerializeToFile(NewtonsoftJsonHelper.Serializer, OwlcatModificationsManager.SettingsFilePath, settingsOld);
+        
       }
       catch (Exception ex)
       {

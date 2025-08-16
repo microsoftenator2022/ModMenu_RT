@@ -45,7 +45,7 @@ namespace ModMenu
     private static bool OnUnload(ModEntry modEntry)
     {
       Logger.Log("Unloading.");
-      Harmony?.UnpatchAll();
+      Harmony?.UnpatchAll(Harmony.Id);
       return true;
     }
 

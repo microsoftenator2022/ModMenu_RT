@@ -1,5 +1,6 @@
 ﻿using Kingmaker.Modding;
-using Kingmaker.Utility;
+using Kingmaker.Utility.DotNetExtensions;
+using Kingmaker.Utility.UnityExtensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,7 +41,7 @@ namespace ModMenu.NewTypes.ModRecording
               UM = entry;
             else
             {
-              UM = UnityModManager.modEntries.FirstOrDefault(mod => mod.Info.Id == record.Id);
+              UM = UnityModManager.ModEntries.FirstOrDefault(mod => mod.Info.Id == record.Id);
               if (UM is not null)
                 cache.Add(UM.Info.Id, UM);
             }

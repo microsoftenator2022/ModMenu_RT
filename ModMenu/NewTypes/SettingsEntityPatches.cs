@@ -6,15 +6,15 @@ using Kingmaker.Localization;
 using Kingmaker.Settings;
 using Kingmaker.UI.Common;
 using Kingmaker.UI.MVVM;
-using Kingmaker.UI.MVVM._PCView.ServiceWindows.Journal;
-using Kingmaker.UI.MVVM._PCView.Settings;
-using Kingmaker.UI.MVVM._PCView.Settings.Entities;
-using Kingmaker.UI.MVVM._PCView.Settings.Entities.Decorative;
-using Kingmaker.UI.MVVM._VM.Settings;
-using Kingmaker.UI.MVVM._VM.Settings.Entities;
-using Kingmaker.UI.MVVM._VM.Settings.Entities.Decorative;
-using Kingmaker.UI.MVVM._VM.Settings.Entities.Difficulty;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.Code.UI.MVVM.View.ServiceWindows.Journal;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities.Decorative;
+using Kingmaker.Code.UI.MVVM.VM.Settings;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities.Decorative;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities.Difficulty;
+using Kingmaker.UI.Models.SettingsUI;
 using Kingmaker.Utility;
 using ModMenu.Settings;
 using Owlcat.Runtime.UI.Controls.Button;
@@ -31,8 +31,15 @@ using System.Reflection.Emit;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using static Kingmaker.UI.SettingsUI.UISettingsManager;
+using static Kingmaker.UI.Models.SettingsUI.UISettingsManager;
 using Object = UnityEngine.Object;
+using Kingmaker.Code.UI.MVVM.View.Common.Dropdown;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.Code.UI.MVVM;
+using static UnityModManagerNet.UnityModManager;
+using Kingmaker.Utility.DotNetExtensions;
+using System.Security.Policy;
+using UniRx;
 
 namespace ModMenu.NewTypes
 {
@@ -67,44 +74,6 @@ namespace ModMenu.NewTypes
         }
       }
 
-    /// <summary>
-    /// Patch to change the way dropdown options are generated so that the settings description would show individual mod descriptions.
-    /// </summary>
-    [HarmonyPatch]
-    static class SettingsEntityDropdownPCView_Patch
-    {
-      [HarmonyPatch(typeof(SettingsEntityDropdownPCView), nameof(SettingsEntityDropdownPCView.SetupDropdown))]
-      static bool Prefix(SettingsEntityDropdownPCView __instance)
-      {
-        if (__instance.ViewModel.m_UISettingsEntity is not UISettingsEntityDropdownModMenuEntry) return true;
-
-        else
-        __instance.Dropdown.gameObject.SetActive(true);
-        __instance.Dropdown.ClearOptions();
-
-        List<TMP_Dropdown.OptionData> options = new();
-        var vm = GameObject.Find("CommonPCView(Clone)/Canvas/SettingsView/")?.GetComponent<SettingsPCView>()?.ViewModel;
-        foreach (var modEntry in ModsMenuEntity.ModEntries)
-        {
-          options.Add(
-          new DropdownOptionWithHighlightCallback()
-          {
-            m_Text = modEntry.ModInfo.ModName,
-            OnMouseEnter = new() { new(_ => {
-              if (vm is null)
-                Main.Logger.Warning("SettingsEntityDropdownPCView_Patch - settings VM is null!");
-              else
-                vm.HandleShowSettingsDescriptionEx(
-                  title: UIUtility.GetSaberBookFormat(modEntry.ModInfo.ModName, default, 140, null, 0f),
-                  description: modEntry.ModInfo.GenerateDescription(),
-                  image: modEntry.ModInfo.ModImage);
-              })}
-          });
-        }
-        __instance.Dropdown.AddOptions(options);
-        return false;
-      }
-    }
 
     /// <summary>
     /// Patch to return the correct view model for <see cref="UISettingsEntityImage"/>
@@ -126,8 +95,8 @@ namespace ModMenu.NewTypes
           }
           if (uiSettingsEntity is UISettingsEntityButton buttonEntity)
           {
-            Main.Logger.NativeLog("Returning SettingsEntityButtonVM.");
             __result = new SettingsEntityButtonVM(buttonEntity);
+            Main.Logger.NativeLog($"Returning SettingsEntityButtonVM. Is null? {__result == null}");
             return false;
           }
           if (uiSettingsEntity is UISettingsEntitySubHeader subHeaderEntity)
@@ -142,9 +111,16 @@ namespace ModMenu.NewTypes
             __result = new SettingsEntityDropdownButtonVM(dropdownButton);
             return false;
           }
+          if (uiSettingsEntity is UISettingsEntityDropdownModMenuEntry modMenuDropdown)
+          {
+            Main.Logger.NativeLog("Returning SettingsEntityDropdownButtonVM.");
+            __result = new SettingsEntityDropdownVM(modMenuDropdown, (SettingsEntityDropdownVM.DropdownType)5);
+            return false;
+          }
         }
         catch (Exception e)
         {
+          
           Main.Logger.LogException("SettingsVM.GetVMForSettingsItem", e);
         }
         return true;
@@ -240,8 +216,22 @@ namespace ModMenu.NewTypes
     [HarmonyPatch(typeof(SettingsPCView.SettingsViews))]
     static class SettingsViews_Patch
     {
-      [HarmonyPatch(nameof(SettingsPCView.SettingsViews.InitializeVirtualList)), HarmonyPrefix]
-      static bool Prefix(SettingsPCView.SettingsViews __instance, VirtualListComponent virtualListComponent)
+      static readonly MethodInfo CallToInitialize = AccessTools.DeclaredMethod(typeof(VirtualListComponent), nameof(VirtualListComponent.Initialize));
+
+      [HarmonyPatch(nameof(SettingsPCView.SettingsViews.InitializeVirtualList)), HarmonyTranspiler]
+      static IEnumerable<CodeInstruction> TranspilerToInitializeNewTemplates(IEnumerable<CodeInstruction> instructions)
+      {
+        foreach (var instr in instructions)
+          if (!instr.Calls(CallToInitialize))
+            yield return instr;
+          else
+          {
+            yield return new CodeInstruction(OpCodes.Ldarg_0);
+            yield return CodeInstruction.Call((IVirtualListElementTemplate[] original, SettingsPCView.SettingsViews __instance) => InitializeNewVirtualElementTemplates(original, __instance));
+            yield return instr;
+          }
+      }
+      static IVirtualListElementTemplate[] InitializeNewVirtualElementTemplates(IVirtualListElementTemplate[]  original, SettingsPCView.SettingsViews __instance)
       {
         try
         {
@@ -252,7 +242,7 @@ namespace ModMenu.NewTypes
           var imageTemplate = CreateImageTemplate(Object.Instantiate(copyFrom));
           var buttonTemplate =
             CreateButtonTemplate(Object.Instantiate(copyFrom),
-            __instance.m_SettingsEntitySliderVisualPerceptionViewPrefab?.m_ResetButton);
+            __instance.m_SettingsEntityStatisticsOptOutViewPrefab?.m_GoToStatisticsButton);
 
           var headerTemplate =
             CreateCollapsibleHeaderTemplate(
@@ -263,35 +253,38 @@ namespace ModMenu.NewTypes
           var dropdownButtonTemplate =
             CreateDropdownButtonTemplate(
               Object.Instantiate(__instance.m_SettingsEntityDropdownViewPrefab.gameObject),
-              __instance.m_SettingsEntitySliderVisualPerceptionViewPrefab?.m_ResetButton);
+              __instance.m_SettingsEntityStatisticsOptOutViewPrefab?.m_GoToStatisticsButton);
 
-          virtualListComponent.Initialize(new IVirtualListElementTemplate[]
-          {
-            new VirtualListElementTemplate<SettingsEntityHeaderVM>(__instance.m_SettingsEntityHeaderViewPrefab),
-            new VirtualListElementTemplate<SettingsEntityBoolVM>(__instance.m_SettingsEntityBoolViewPrefab),
-            new VirtualListElementTemplate<SettingsEntityDropdownVM>(__instance.m_SettingsEntityDropdownViewPrefab, 0),
-            new VirtualListElementTemplate<SettingsEntitySliderVM>(__instance.m_SettingsEntitySliderViewPrefab, 0),
-            new VirtualListElementTemplate<SettingEntityKeyBindingVM>(__instance.m_SettingEntityKeyBindingViewPrefab),
-            new VirtualListElementTemplate<SettingsEntityDropdownVM>(__instance.m_SettingsEntityDropdownDisplayModeViewPrefab, 1),
-            new VirtualListElementTemplate<SettingsEntityDropdownGameDifficultyVM>(__instance.m_SettingsEntityDropdownGameDifficultyViewPrefab, 0),
-            new VirtualListElementTemplate<SettingsEntitySliderVM>(__instance.m_SettingsEntitySliderVisualPerceptionViewPrefab, 1),
-            new VirtualListElementTemplate<SettingsEntitySliderVM>(__instance.m_SettingsEntitySliderVisualPerceptionWithImagesViewPrefab, 2),
-            new VirtualListElementTemplate<SettingsEntityStatisticsOptOutVM>(__instance.m_SettingsEntityStatisticsOptOutViewPrefab),
+          var dropdownModMenuView = Object.Instantiate(__instance.m_SettingsEntityDropdownViewPrefab.gameObject).GetComponent<SettingsEntityDropdownPCView>();
+
+          original = original.Concat(
+            //new VirtualListElementTemplate<SettingsEntityHeaderVM>(__instance.m_SettingsEntityHeaderViewPrefab),
+            //new VirtualListElementTemplate<SettingsEntityBoolVM>(__instance.m_SettingsEntityBoolViewPrefab),
+            //new VirtualListElementTemplate<SettingsEntityDropdownVM>(__instance.m_SettingsEntityDropdownViewPrefab, 0),
+            //new VirtualListElementTemplate<SettingsEntityDropdownVM>(__instance.m_SettingsEntityDropdownViewPrefab, 1),
+            //new VirtualListElementTemplate<SettingsEntitySliderVM>(__instance.m_SettingsEntitySliderViewPrefab, 0),
+            //new VirtualListElementTemplate<SettingsEntitySliderVM>(__instance.m_SettingsEntitySliderGammaCorrectionViewPrefab, 1),
+            //new VirtualListElementTemplate<SettingsEntitySliderVM>(__instance.m_SettingEntityFontSizeViewPrefab, 2),
+            //new VirtualListElementTemplate<SettingEntityKeyBindingVM>(__instance.m_SettingEntityKeyBindingViewPrefab),
+            //new VirtualListElementTemplate<SettingsEntityDropdownGameDifficultyVM>(__instance.m_SettingsEntityDropdownGameDifficultyViewPrefab, 0),
+            //new VirtualListElementTemplate<SettingsEntityStatisticsOptOutVM>(__instance.m_SettingsEntityStatisticsOptOutViewPrefab),
             new VirtualListElementTemplate<SettingsEntityImageVM>(imageTemplate),
             new VirtualListElementTemplate<SettingsEntityButtonVM>(buttonTemplate),
             new VirtualListElementTemplate<SettingsEntityCollapsibleHeaderVM>(headerTemplate),
             new VirtualListElementTemplate<SettingsEntitySubHeaderVM>(subHeaderTemplate),
             new VirtualListElementTemplate<SettingsEntityDropdownButtonVM>(dropdownButtonTemplate, 0),
-          });
+            new VirtualListElementTemplate<SettingsEntityDropdownVM>(dropdownModMenuView, 5)
+            ).ToArray();
+          return original;
         }
         catch (Exception e)
         {
           Main.Logger.LogException("SettingsViews_Patch", e);
+          return original;
         }
-        return false;
       }
 
-      private static SettingsEntityButtonView CreateButtonTemplate(GameObject prefab, OwlcatButton buttonPrefab)
+      private static SettingsEntityButtonView CreateButtonTemplate(GameObject prefab, OwlcatMultiButton buttonPrefab)
       {
         Main.Logger.NativeLog("Creating button template.");
 
@@ -300,14 +293,15 @@ namespace ModMenu.NewTypes
         Object.DestroyImmediate(prefab.transform.Find("MultiButton").gameObject);
         Object.DontDestroyOnLoad(prefab);
 
-        OwlcatButton buttonControl = null;
+        OwlcatMultiButton buttonControl = null;
         TextMeshProUGUI buttonLabel = null;
 
         // Add in our own button
         if (buttonPrefab != null)
         {
           var button = Object.Instantiate(buttonPrefab.gameObject, prefab.transform);
-          buttonControl = button.GetComponent<OwlcatButton>();
+          button.name = "SettingsMultiButton";
+          buttonControl = button.GetComponent<OwlcatMultiButton>();
           buttonLabel = button.GetComponentInChildren<TextMeshProUGUI>();
 
           var layout = button.AddComponent<LayoutElement>();
@@ -317,10 +311,12 @@ namespace ModMenu.NewTypes
 
           rect.anchorMin = new(1, 0.5f);
           rect.anchorMax = new(1, 0.5f);
-          rect.pivot = new(1, 0.5f);
+          rect.pivot = new(0.5f, 0.5f);
+          rect.offsetMin = new (-326, - 21);
+          rect.offsetMax = new(-62, 19);
 
-          rect.anchoredPosition = new(-55, 0);
-          rect.sizeDelta = new(430, 45);
+          rect.anchoredPosition = new(-194, - 1);
+          rect.sizeDelta = new(264, 40);
         }
 
         // Add our own View (after destroying the Bool one)
@@ -328,11 +324,13 @@ namespace ModMenu.NewTypes
 
         // Wire up the fields that would have been deserialized if coming from a bundle
         templatePrefab.HighlightedImage =
-          prefab.transform.Find("HighlightedImage").gameObject.GetComponent<Image>();
+          prefab.transform.Find("SettingsMultiButton/RaycastImage")?.gameObject.GetComponent<Image>();
         templatePrefab.Title =
-          prefab.transform.Find("HorizontalLayoutGroup/Text").gameObject.GetComponent<TextMeshProUGUI>();
+          prefab.transform.GetComponentInChildren<TextMeshProUGUI>();
         templatePrefab.Button = buttonControl;
         templatePrefab.ButtonLabel = buttonLabel;
+
+        templatePrefab.name = "SettingsEntityButtonView";
 
         return templatePrefab;
       }
@@ -403,24 +401,35 @@ namespace ModMenu.NewTypes
       }
 
       private static SettingsEntityDropdownButtonView CreateDropdownButtonTemplate(
-        GameObject prefab, OwlcatButton buttonPrefab)
+        GameObject prefab, OwlcatMultiButton buttonPrefab)
       {
         Main.Logger.NativeLog("Creating dropdown button template.");
 
         // Destroy the stuff we don't want from the source prefab
         Object.DestroyImmediate(prefab.GetComponent<SettingsEntityDropdownPCView>());
-        Object.DestroyImmediate(prefab.transform.Find("SetConnectionMarkerIamSet").gameObject);
+        Object.DestroyImmediate(prefab.transform.Find("SetConnectionMarkerIamSet")?.gameObject);
         Object.DontDestroyOnLoad(prefab);
 
-        OwlcatButton buttonControl = null;
+        OwlcatMultiButton buttonControl = null;
         TextMeshProUGUI buttonLabel = null;
-
+        Image oldImage = null;
         // Add in our own button
         if (buttonPrefab != null)
         {
           var button = Object.Instantiate(buttonPrefab.gameObject, prefab.transform);
-          buttonControl = button.GetComponent<OwlcatButton>();
-          buttonLabel = button.GetComponentInChildren<TextMeshProUGUI>();
+          buttonControl = button.GetComponent<OwlcatMultiButton>();
+          buttonControl.name = "Button";
+          buttonLabel = buttonControl.GetComponentInChildren<TextMeshProUGUI>();
+          buttonLabel.name = "Text";
+          buttonLabel.text = "";
+
+
+
+          oldImage = button.GetComponent<Image>();
+          if (oldImage != null)
+          {
+            oldImage.sprite = null;
+          }
 
           var layout = button.AddComponent<LayoutElement>();
           layout.ignoreLayout = true;
@@ -437,15 +446,21 @@ namespace ModMenu.NewTypes
 
         // Add our own View (after destroying the Bool one)
         var templatePrefab = prefab.AddComponent<SettingsEntityDropdownButtonView>();
+        templatePrefab.name = "SettingsEntityDropdownButtonView";
+        templatePrefab.m_MarkImage = prefab.transform.Find("HorizontalLayoutGroup/PointGroup/MarkImage")?.GetComponent<Image>();
+        templatePrefab.m_PointImage = prefab.transform.Find("HorizontalLayoutGroup/PointGroup/PointImage")?.GetComponent<Image>();
+        templatePrefab.m_SetConnector = prefab.transform.Find("HorizontalLayoutGroup/SetConnectionMarker")?.gameObject;
+        templatePrefab.m_SetConnectorIAmSet = prefab.transform.Find("HorizontalLayoutGroup/SetConnectionMarker/IAmSetter")?.gameObject;
 
         // Wire up the fields that would have been deserialized if coming from a bundle
         templatePrefab.HighlightedImage =
           prefab.transform.Find("HighlightedImage").gameObject.GetComponent<Image>();
         templatePrefab.Title =
           prefab.transform.Find("HorizontalLayoutGroup/Text").gameObject.GetComponent<TextMeshProUGUI>();
-        templatePrefab.Dropdown = prefab.GetComponentInChildren<TMP_Dropdown>();
+        templatePrefab.m_Dropdown = prefab.GetComponentInChildren<OwlcatDropdown>();
         templatePrefab.Button = buttonControl;
         templatePrefab.ButtonLabel = buttonLabel;
+        templatePrefab.ButtonImage = oldImage;
 
         return templatePrefab;
       }
@@ -455,99 +470,66 @@ namespace ModMenu.NewTypes
     [HarmonyPatch]
     internal static class DefaultButtonPatcher
     {
-      [HarmonyPatch(typeof(SettingsVM), nameof(SettingsVM.SetSettingsList))]
-      [HarmonyTranspiler]
-      static IEnumerable<CodeInstruction> SettingsVM_SetSettingsList_Transpiler_ToEnableDefaultButtonOnModsTab(IEnumerable<CodeInstruction> instructions)
-      {
-        var _inst = instructions.ToList();
-        int length = _inst.Count;
-        int index = -1;
-        for (int i = 0; i < length; i++)
-        {
-          if (
-            _inst[i + 0].opcode == OpCodes.Ldloc_0 &&
-            _inst[i + 1].opcode == OpCodes.Ldfld && _inst[i + 1].operand is FieldInfo fi && fi.Name.Contains("settingsScreen") &&
-            _inst[i + 2].opcode == OpCodes.Ldc_I4_4 &&
-            _inst[i + 3].opcode == OpCodes.Beq_S || _inst[i + 3].opcode == OpCodes.Beq)
-          {
-            index = i;
-            break;
-          }
-        }
 
-        if (index == -1)
-        {
-          Main.Logger.Error("DefaultButtonPatcher - failed to find the index when transpile SettingsVM.SetSettingsList. Default button will not be enabled on the Mods tab of settings screen.");
-          return instructions;
-        }
-
-        _inst.InsertRange(index + 4, new CodeInstruction[4] {
-          new (_inst[index + 0]),
-          new (_inst[index + 1]),
-          new (OpCodes.Ldc_I4, ModsMenuEntity.SettingsScreenValue),
-          new (_inst[index + 3]),
-        });
-
-        return _inst;
-      }
+      //AAAAAAAAAAAAAAAAAAAAAAAAAAa
 
       /// <summary>
       /// Will make Default button affect the mod selected on the Mod tab
       /// </summary>
       /// <returns></returns>
-      [HarmonyPatch(typeof(SettingsController), nameof(SettingsController.ResetToDefault))]
-      [HarmonyTranspiler]
-      static IEnumerable<CodeInstruction> SettingsController_ResetToDefault_Transpiler_ToCollectModSettings(IEnumerable<CodeInstruction> instructions, ILGenerator gen)
-      {
-        var _inst = instructions.ToList();
-        int length = _inst.Count;
-        int index = -1;
-        FieldInfo settingsManagerInfo = typeof(Kingmaker.Game).GetField(nameof(Kingmaker.Game.UISettingsManager));
-        MethodInfo gameGetter = typeof(Kingmaker.Game).GetProperty(nameof(Kingmaker.Game.Instance)).GetMethod;
+      //[HarmonyPatch(typeof(SettingsController), nameof(SettingsController.ResetToDefault))]
+      //[HarmonyTranspiler]
+      //static IEnumerable<CodeInstruction> SettingsController_ResetToDefault_Transpiler_ToCollectModSettings(IEnumerable<CodeInstruction> instructions, ILGenerator gen)
+      //{
+      //  var _inst = instructions.ToList();
+      //  int length = _inst.Count;
+      //  int index = -1;
+      //  MethodInfo gameGetter = typeof(Game).GetProperty(nameof(Game.Instance)).GetMethod;
+      //  FieldInfo settingsManagerInfo = typeof(Game).GetField(nameof(Game.UISettingsManager));
 
 
-        for (int i = 0; i < length; i++)
-        {
-          if (
-            ((_inst[i + 0].opcode == OpCodes.Call || _inst[i + 0].opcode == OpCodes.Callvirt) && _inst[i + 0].operand is MethodInfo mi1 && mi1 == gameGetter) &&
-            (_inst[i + 1].opcode == OpCodes.Ldfld && _inst[i + 1].operand is FieldInfo fi && fi == settingsManagerInfo) &&
-            _inst[i + 2].opcode == OpCodes.Ldarg_0 &&
-            _inst[i + 3].opcode == OpCodes.Newobj &&
-            ((_inst[i + 4].opcode == OpCodes.Call || _inst[i + 4].opcode == OpCodes.Callvirt) && _inst[i + 4].operand is MethodInfo mi2 && mi2.Name.Contains("GetSettingsList")))
-          {
-            index = i;
-            break;
-          }
-        }
+      //  for (int i = 0; i < length; i++)
+      //  {
+      //    if (
+      //      ((_inst[i + 0].opcode == OpCodes.Call || _inst[i + 0].opcode == OpCodes.Callvirt) && _inst[i + 0].operand is MethodInfo mi1 && mi1 == gameGetter) &&
+      //      (_inst[i + 1].opcode == OpCodes.Ldfld && _inst[i + 1].operand is FieldInfo fi && fi == settingsManagerInfo) &&
+      //      _inst[i + 2].opcode == OpCodes.Ldarg_1 &&
+      //      _inst[i + 3].opcode == OpCodes.Newobj &&
+      //      ((_inst[i + 4].opcode == OpCodes.Call || _inst[i + 4].opcode == OpCodes.Callvirt) && _inst[i + 4].operand is MethodInfo mi2 && mi2.Name.Contains("GetSettingsList")))
+      //    {
+      //      index = i;
+      //      break;
+      //    }
+      //  }
 
-        if (index == -1)
-        {
-          Main.Logger.Error("DefaultButtonPatcher - failed to find the index when transpile SettingsController.ResetToDefault. Default button will do nothing on the Mods tab.");
-          return instructions;
-        }
+      //  if (index == -1)
+      //  {
+      //    Main.Logger.Error("DefaultButtonPatcher - failed to find the index when transpile SettingsController.ResetToDefault. Default button will do nothing on the Mods tab.");
+      //    return instructions;
+      //  }
 
-        Label labelNotMods = gen.DefineLabel();
-        _inst[index].labels.Add(labelNotMods);
+      //  Label labelNotMods = gen.DefineLabel();
+      //  _inst[index].labels.Add(labelNotMods);
 
-        Label labelIsMods = gen.DefineLabel();
-        _inst[index+5].labels.Add(labelIsMods);
+      //  Label labelIsMods = gen.DefineLabel();
+      //  _inst[index+5].labels.Add(labelIsMods);
 
-        MethodInfo mi = typeof(Enumerable).GetMethod(nameof(Enumerable.ToList)).MakeGenericMethod(typeof(UISettingsGroup));
+      //  MethodInfo mi = typeof(Enumerable).GetMethod(nameof(Enumerable.ToList)).MakeGenericMethod(typeof(UISettingsGroup));
 
-        _inst.InsertRange(index, new CodeInstruction[] {
-          new CodeInstruction(OpCodes.Ldarg_0),
-          //CodeInstruction.Call((UISettingsManager.SettingsScreen e) => Convert.ToInt32(e)), //WHY DOES IT NOT WORK?!?!?!?!?!
-          //new CodeInstruction(OpCodes.Ldc_I4, ModsMenuEntity.SettingsScreenValue),
-          //new CodeInstruction(OpCodes.Ceq),
-          CodeInstruction.Call((UISettingsManager.SettingsScreen e) => AnotherScreenCheck(e)),
-          new CodeInstruction(OpCodes.Brfalse_S, labelNotMods),
-          new CodeInstruction(OpCodes.Call, typeof(ModsMenuEntity).GetProperty(nameof(ModsMenuEntity.CollectSettingGroups), BindingFlags.Static | BindingFlags.NonPublic).GetMethod),
-          new CodeInstruction(OpCodes.Callvirt, mi),
-          new CodeInstruction(OpCodes.Br_S, labelIsMods)
-        });;
+      //  _inst.InsertRange(index, new CodeInstruction[] {
+      //    new CodeInstruction(OpCodes.Ldarg_0),
+      //    //CodeInstruction.Call((UISettingsManager.SettingsScreen e) => Convert.ToInt32(e)), //WHY DOES IT NOT WORK?!?!?!?!?!
+      //    //new CodeInstruction(OpCodes.Ldc_I4, ModsMenuEntity.SettingsScreenValue),
+      //    //new CodeInstruction(OpCodes.Ceq),
+      //    CodeInstruction.Call((UISettingsManager.SettingsScreen e) => AnotherScreenCheck(e)),
+      //    new CodeInstruction(OpCodes.Brfalse_S, labelNotMods),
+      //    new CodeInstruction(OpCodes.Call, typeof(ModsMenuEntity).GetProperty(nameof(ModsMenuEntity.CollectSettingGroups), BindingFlags.Static | BindingFlags.NonPublic).GetMethod),
+      //    new CodeInstruction(OpCodes.Callvirt, mi),
+      //    new CodeInstruction(OpCodes.Br_S, labelIsMods)
+      //  });;
 
-        return _inst;
-      }
+      //  return _inst;
+      //}
 
       static bool AnotherScreenCheck(UISettingsManager.SettingsScreen e) => e == (UISettingsManager.SettingsScreen)ModsMenuEntity.SettingsScreenValue;
 
@@ -628,7 +610,7 @@ namespace ModMenu.NewTypes
       
       static string MakeMeDefaultButtonMessage()
       {
-        return string.Format(newDefaultMessage, SettingsEntityModMenuEntry.instance.m_TempValue.ModInfo.ModName);
+        return string.Format(newDefaultMessage, SettingsEntityModMenuEntry.instance.m_TempValue.ModInfo.ModName.Text);
       }
     }
   }

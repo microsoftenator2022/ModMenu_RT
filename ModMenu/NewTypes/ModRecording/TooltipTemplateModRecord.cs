@@ -1,10 +1,10 @@
-﻿using Kingmaker.UI.MVVM._VM.Tooltip.Bricks;
+﻿using Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks;
 using Kingmaker.Utility;
 using Owlcat.Runtime.UI.Tooltips;
 using System.Collections.Generic;
 using System.Linq;
 using UniRx;
-using static Kingmaker.UI.MVVM._VM.Tooltip.Bricks.TooltipTextType;
+using static Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks.TooltipTextType;
 using static ModMenu.NewTypes.ModRecording.SaveInfoWithModList;
 using static ModMenu.NewTypes.ModRecording.StringsAndIcons;
 
@@ -78,7 +78,7 @@ namespace ModMenu.NewTypes.ModRecording
       }
       if (mods.Any(m => m.record.modType is ModRecord.ModType.OwlMod))
       {
-        yield return new TooltipBrickText("\n", Small);
+        yield return new TooltipBrickText("\n");
         yield return new TooltipBrickText(TooltipOMM, BoldCentered);
         yield return new TooltipBrickSeparator(TooltipBrickElementType.Big);
         foreach (var info in mods.Where(m => m.record.modType == ModRecord.ModType.OwlMod))
@@ -89,7 +89,7 @@ namespace ModMenu.NewTypes.ModRecording
       }
       if (mods.Any(m => m.record.modType is not ModRecord.ModType.OwlMod and not ModRecord.ModType.UmmMod))
       {
-        yield return new TooltipBrickText("\n", Small);
+        yield return new TooltipBrickText("\n");
         yield return new TooltipBrickText(TooltipOther, BoldCentered);
         yield return new TooltipBrickSeparator(TooltipBrickElementType.Big);
         foreach (var _ in mods.Where(m => m.record.modType is not ModRecord.ModType.OwlMod and not ModRecord.ModType.UmmMod))

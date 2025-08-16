@@ -14,6 +14,8 @@ using Newtonsoft.Json;
 using UnityModManagerNet;
 using Kingmaker.Modding;
 using Kingmaker.EntitySystem.Persistence.Versioning;
+using Kingmaker.Utility.UnityExtensions;
+using Kingmaker.Utility.Serialization;
 
 namespace ModMenu.NewTypes.ModRecording
 {
@@ -28,7 +30,7 @@ namespace ModMenu.NewTypes.ModRecording
 
     [JsonObject]
     [Serializable]
-    internal class ModRecord
+    internal class ModRecord 
     {
       [JsonProperty]
       public ModType modType;
@@ -56,7 +58,7 @@ namespace ModMenu.NewTypes.ModRecording
 
     static ModRecord[] CollectModRecords()
     {
-      return UnityModManager.modEntries
+      return UnityModManager.ModEntries
         .Where(m => m.Enabled && m.Assembly != Assembly.GetExecutingAssembly()) //don't  want ModMenu recorded in all saves
         .Select(m => new ModRecord() { modType = ModRecord.ModType.UmmMod, Id = m.Info.Id, Version = m.Info.Version })
         .Concat(OwlcatModificationsManager.Instance.AppliedModifications
@@ -69,9 +71,9 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPrepare]
     static bool PreparePatchForSaveInfoWithModList()
     {
-      OwlcatJsonConvert_DeserializeObject_SaveInfo = AccessTools.DeclaredMethod(typeof(OwlcatJsonConvert), nameof(OwlcatJsonConvert.DeserializeObject), null, new Type[1] { typeof(SaveInfo) });
+      OwlcatJsonConvert_DeserializeObject_SaveInfo = AccessTools.DeclaredMethod(typeof(JsonExtensions), nameof(JsonExtensions.DeserializeObject), new Type[2] { typeof(JsonSerializer), typeof(string) }, new Type[1] { typeof(SaveInfo) });
 
-      var newMethod = AccessTools.DeclaredMethod(typeof(OwlcatJsonConvert), nameof(OwlcatJsonConvert.DeserializeObject), null, new Type[1] { typeof(SaveInfoWithModList) });
+      var newMethod = AccessTools.DeclaredMethod(typeof(JsonExtensions), nameof(JsonExtensions.DeserializeObject), new Type[2] { typeof(JsonSerializer), typeof(string)}, new Type[1] { typeof(SaveInfoWithModList) });
       OwlcatJsonConvert_DeserializeObject_SaveInfoWithModList = new CodeInstruction(OpCodes.Callvirt, newMethod);
 
       return OwlcatJsonConvert_DeserializeObject_SaveInfo != null && newMethod != null;
@@ -108,7 +110,7 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPrefix]
     static bool JsonUpgradeSystem_ShouldUpgrade(string fileName)
     {
-      return !fileName.StartsWith("header.json");
+      return !fileName.StartsWith(SaveConsts.HeaderJsonName) && !fileName.StartsWith("checksums");
     }
 
 
@@ -124,7 +126,7 @@ namespace ModMenu.NewTypes.ModRecording
         var text = saver.ReadJson(ModListJsonFileName);
         ModRecord[] arr = null;
         if (!text.IsNullOrEmpty())
-          arr = OwlcatJsonConvert.DeserializeObject<ModRecord[]>(text);
+          arr = SaveSystemJsonSerializer.Serializer.DeserializeObject<ModRecord[]>(text);
         if (arr != null && __result is SaveInfoWithModList saveInfoWithMods)
         {
           saveInfoWithMods.UmmModRecordList = new();
@@ -152,20 +154,64 @@ namespace ModMenu.NewTypes.ModRecording
 
     }
 
-    [HarmonyPatch(typeof(SaveCreateDTO), nameof(SaveCreateDTO.Build))]
-    [HarmonyPostfix]
-    static void SaveCreateDTO_Build_PrefixToInsertModList(SaveInfo save)
+    [HarmonyPatch(typeof(ThreadedGameLoader), nameof(ThreadedGameLoader.CreateStateData))]
+    [HarmonyPrefix]
+    static void PatchToNotReadModRecords(ref List<string> allFiles)
+      => allFiles.RemoveAll(f => f.StartsWith("header.json"));
+    [HarmonyPatch]
+    static class PatchToSerializeModInfo
     {
-      var saver = save.Saver;
-      if (saver is null)
-      {
-        Main.Logger.Warning($"SaveCreateDTO_Build_PrefixToInsertModList - did not have a saver in {save.Name} save file");
-        return;
-      }
-      saver.SaveJson(ModListJsonFileName, OwlcatJsonConvert.SerializeObject(CollectModRecords(), Formatting.Indented));
-    }
 
+      static MethodInfo targetMethod;
+      static FieldInfo saveInfoReflected;
+      [HarmonyTargetMethod]
+      static MethodBase TargetMethod()
+      {
+        var types = typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Instance);
+        foreach (var t in types)
+        {
+          if (t.IsValueType && t.Name.StartsWith("<SerializeAndSaveThread>"))
+          {
+            targetMethod = t.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic);
+            saveInfoReflected = t.GetField("saveInfo");
+            return targetMethod;
+          }
+        }
+        return null;
+      }
+
+      [HarmonyTranspiler]
+      static IEnumerable<CodeInstruction> TheTranspiler(IEnumerable<CodeInstruction> original)
+      {
+        var callToClear = AccessTools.Method(typeof(ISaver), nameof(ISaver.Clear));
+        bool Found = false;
+        foreach (var instr in original)
+        {
+          yield return instr;
+          if (instr.Calls(callToClear) && !Found)
+          {
+            yield return new CodeInstruction(OpCodes.Ldsfld, typeof(Main).GetField(nameof(Main.Logger), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic));
+            yield return new CodeInstruction(OpCodes.Ldstr, "Begin saving ModRecords");
+            yield return new CodeInstruction(OpCodes.Callvirt, typeof(UnityModManager.ModEntry.ModLogger).GetMethod("Log", new Type[] { typeof(string) }));
+            yield return new CodeInstruction(OpCodes.Ldarg_0);
+            yield return new CodeInstruction(OpCodes.Ldfld, saveInfoReflected);
+            yield return new CodeInstruction(OpCodes.Callvirt, typeof(SaveInfo).GetProperty(nameof(SaveInfo.Saver)).GetMethod);
+            yield return new CodeInstruction(OpCodes.Ldstr, ModListJsonFileName);
+            yield return new CodeInstruction(OpCodes.Call, typeof(SaveSystemJsonSerializer).GetProperty(nameof(SaveSystemJsonSerializer.Serializer)).GetMethod);
+            yield return CodeInstruction.Call(() => CollectModRecords());
+            yield return CodeInstruction.Call((JsonSerializer serializer, ModRecord[] records) => JsonExtensions.SerializeObject(serializer, records));
+            yield return new CodeInstruction(OpCodes.Callvirt, typeof(ISaver).GetMethod(nameof(ISaver.SaveJson)));
+            yield return new CodeInstruction(OpCodes.Ldsfld, typeof(Main).GetField(nameof(Main.Logger), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic));
+            yield return new CodeInstruction(OpCodes.Ldstr, "Done saving ModRecords");
+            yield return new CodeInstruction(OpCodes.Callvirt, typeof(UnityModManager.ModEntry.ModLogger).GetMethod("Log", new Type[] { typeof(string) }));
+            Found = true;
+          }
+        }
+      }
+    }
     #region OldPatchToNotReadModRecord
+
+
     //[HarmonyPatch(typeof(ThreadedGameLoader), nameof(ThreadedGameLoader.ReadFiles))]
     //[HarmonyTranspiler]
     //static IEnumerable<CodeInstruction> ThreadedGameLoader_ReadFiles_PatchToNotReadModRecords(IEnumerable<CodeInstruction> __instructions)

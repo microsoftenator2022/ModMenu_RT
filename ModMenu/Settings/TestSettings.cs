@@ -1,12 +1,16 @@
 ﻿using Kingmaker.Localization;
 using Kingmaker.PubSubSystem;
-using Kingmaker.UI.MVVM._VM.Settings.Entities;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
+using Kingmaker.UI.Models.SettingsUI;
 using ModMenu.NewTypes;
 using System.Text;
 using UnityEngine;
-using static Kingmaker.UI.KeyboardAccess;
+using Kingmaker.UI.InputSystems.Enums;
+using Kingmaker.PubSubSystem.Core;
+using static Kingmaker.UI.InputSystems.KeyboardAccess;
 using static ModMenu.Helpers;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets.Dropdowns;
+using Kingmaker.Settings.Entities;
 
 namespace ModMenu.Settings
 {
@@ -39,8 +43,8 @@ namespace ModMenu.Settings
           deDE: "Dies ist eine Testbeschreibung für einen Mod, und sie ist noch ein wenig länger, damit sie mehrere Zeilen benötigt.",
           frFR: "Ceci est un exemple de description de mod qui doit être assez long pour prendre deux lignes mais on n'a pas dit au traducteur quelle est la taille des lignes, j'imagine que c'est assez long maintenant. "))
           .SetModIllustration(Helpers.CreateSprite("ModMenu.TestSettingsIllustration2.png"))
-          .AddImage(Helpers.CreateSprite("ModMenu.WittleWolfie.png"), 250)
-          .AddDefaultButton(OnDefaultsApplied)
+          //.AddImage(Helpers.CreateSprite("ModMenu.WittleWolfie.png"), 250)
+          //.AddDefaultButton(OnDefaultsApplied)
           .AddButton(
             Button.New(
               CreateString("button-desc", "This is a button"), CreateString("button-text", "Click Me!"), OnClick))
@@ -101,7 +105,7 @@ namespace ModMenu.Settings
                 maxValue: 6)
               .HideValueText())
           .AddAnotherSettingsGroup(GetKey("extra"), CreateString("extra-title", "More Test Settings"))
-          .AddDefaultButton()
+          //.AddDefaultButton()
           .AddToggle(
             Toggle.New(
               GetKey("empty-toggle"), defaultValue: false, CreateString("empty-toggle-desc", "A useless toggle")))
@@ -129,7 +133,7 @@ namespace ModMenu.Settings
                 GetKey("key-binding-default"),
                 GameModesGroup.All,
                 CreateString(GetKey("key-binding-default-desc"), "This binding is pre-set"))
-              .SetPrimaryBinding(KeyCode.W, withCtrl: true, withAlt: true)
+              .SetPrimaryBinding(KeyCode.W, withCtrl: true, withAlt: false)
               .SetSecondaryBinding(KeyCode.M, withAlt: true, withShift: true),
             OnKeyPress)
           .AddDropdownButton(
@@ -145,7 +149,8 @@ namespace ModMenu.Settings
                   CreateString("dropdown-button-2", "Button calls onClick(1)"),
                   CreateString("dropdown-button-3", "Button calls onClick(2)"),
                 })
-              .OnTempValueChanged(value => Main.Logger.Log($"Currently selected dropdown button is {value}"))));
+              .OnTempValueChanged(value => Main.Logger.Log($"Currently selected dropdown button is {value}")))
+              );
 
       EventBus.Subscribe(this);
     }
@@ -175,13 +180,14 @@ namespace ModMenu.Settings
 
     private bool CheckToggle()
     {
-      Main.Logger.NativeLog("Checking toggle");
-      return ModMenu.GetSettingValue<bool>(GetKey("toggle"));
+      var value = ModMenu.GetSetting<SettingsEntityBool, bool>(GetKey("toggle"))?.GetTempValue() ?? false;
+      //Main.Logger.NativeLog($"Checking toggle - {value}");
+      return value;
     }
 
+    static SettingsDescriptionUpdater<SettingsEntityBoolVM> sdu = new();
     public void OnToggleUDescriptionUpdate(bool value)
     {
-      SettingsDescriptionUpdater<SettingsEntityBoolVM> sdu = new();
       sdu.TryUpdate("This is a toggle changes the LongDescription text!", $"Hey this value is now {value}");
     }
 

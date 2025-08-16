@@ -2,20 +2,28 @@
 using Kingmaker;
 using Kingmaker.Localization;
 using Kingmaker.Localization.Shared;
-using Kingmaker.UI.MVVM._PCView.Settings.Entities;
-using Kingmaker.UI.MVVM._PCView.Settings;
-using Kingmaker.UI.MVVM._VM.Settings.Entities;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using Kingmaker.Utility;
-using Kingmaker.UI.MVVM._VM.Settings;
+using Kingmaker.Code.UI.MVVM.VM.Settings;
 using UniRx;
 using Kingmaker.UI.Common;
 using static UnityModManagerNet.UnityModManager;
 using UnityEngine.UI;
+using Kingmaker.Localization.Enums;
+using Newtonsoft.Json.Utilities;
+using Kingmaker.Utility.UnityExtensions;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.PubSubSystem.Core.Interfaces;
+using Kingmaker.PubSubSystem.Core;
+using Kingmaker.PubSubSystem;
+using Kingmaker.Code.UI.MVVM.View.Common.PC;
 
 namespace ModMenu
 {
@@ -31,8 +39,7 @@ namespace ModMenu
     {
       var localString = new LocalString(key, enGB, ruRU, zhCN, deDE, frFR);
       Strings.Add(localString);
-      if (LocalizationManager.Initialized)
-        localString.Register();
+
       return localString.LocalizedString;
     }
 
@@ -61,6 +68,12 @@ namespace ModMenu
       private readonly string frFR;
       const string NullString = "<null>";
 
+      static LocalString()
+      {
+        ((ILocalizationProvider)LocalizationManager.Instance).LocaleChanged += new((Locale _) 
+          => { foreach (var locStr in Strings) locStr.Register(); });
+      }
+
       public LocalString(string key, string enGB, string ruRU, string zhCN, string deDE, string frFR)
       {
         LocalizedString = new LocalizedString() { m_Key = key };
@@ -69,80 +82,33 @@ namespace ModMenu
         this.zhCN = zhCN;
         this.deDE = deDE;
         this.frFR = frFR;
+        if (LocalizationManager.Instance.CurrentPack != null)
+          Register();
       }
 
       public void Register()
       {
         string localized;
-        if (LocalizationManager.CurrentPack.Locale == Locale.enGB)
+        if (LocalizationManager.Instance.CurrentPack.Locale is Locale.enGB)
         {
           localized = enGB;
           goto putString;
         }
 
-        localized = (LocalizationManager.CurrentPack.Locale) switch
+        localized = LocalizationManager.Instance.CurrentPack.Locale switch
         {
           Locale.ruRU => ruRU,
           Locale.zhCN => zhCN,
           Locale.deDE => deDE,
           Locale.frFR => frFR,
-          _ => ""
+          _ => enGB
         };
 
         if (localized.IsNullOrEmpty() || localized == NullString)
           localized = enGB;
 
         ;putString:
-        LocalizationManager.CurrentPack.PutString(LocalizedString.m_Key, localized);
-      }
-    }
-
-    static Sprite ImageForSettingDescription;
-    internal static void HandleShowSettingsDescriptionEx(this SettingsVM settings, string title, string description, Sprite image = null)
-    {      
-      ImageForSettingDescription = image;
-      settings.HandleShowSettingsDescription(
-                  title: title,
-                  description: description);
-    }
-
-    [HarmonyPatch]
-    static class SettingsDescriptionPatchToHandleModImages
-    {
-      //[HarmonyPatch(typeof(SettingsVM), nameof(SettingsVM.HandleShowSettingsDescription))]
-      //[HarmonyPrefix]
-      //static void HandleShowSettingsDescription_Prefix()
-      //  => ImageForSettingDescription = null;
-
-      [HarmonyPatch(typeof(SettingsVM), nameof(SettingsVM.HandleHideSettingsDescription))]
-      [HarmonyPrefix]
-      static void HandleHideSettingsDescription_Postfix()
-        => ImageForSettingDescription = null;
-
-      [HarmonyPatch(typeof(SettingsDescriptionPCView), nameof(SettingsDescriptionPCView.Initialize))]
-      [HarmonyPostfix]
-      static void SettingsDescriptionPCView_UpdateView_Initialize(SettingsDescriptionPCView __instance)
-      {
-        var content = __instance.transform.Find("BodyGroup/Content");
-        var go = new GameObject("Image");
-        var image = go.AddComponent<Image>();
-        image.preserveAspect = true;
-        go.AddComponent<LayoutElement>().preferredHeight = 160;
-        go.transform.SetParent(content, false);
-        go.transform.SetSiblingIndex(0);
-        go.SetActive(true);
-      }
-
-      [HarmonyPatch(typeof(SettingsDescriptionPCView), nameof(SettingsDescriptionPCView.UpdateView))]
-      [HarmonyPostfix]
-      static void SettingsDescriptionPCView_UpdateView_Postfix(SettingsDescriptionPCView __instance)
-      {
-        var image = __instance.transform.Find("BodyGroup/Content/Image").GetComponent<Image>();
-        image.sprite = ImageForSettingDescription;
-        if (ImageForSettingDescription == null)
-          image.gameObject.SetActive(false);
-        else
-          image.gameObject.SetActive(true);
+        LocalizationManager.Instance.CurrentPack.PutString(LocalizedString.m_Key, localized);
       }
     }
 
@@ -157,59 +123,22 @@ namespace ModMenu
     public class SettingsDescriptionUpdater<T>
         where T : SettingsEntityWithValueVM
     {
-      private readonly string pathMainUi;
-      private readonly string pathDescriptionUi;
-
-      private Transform mainUI;
       private Transform settingsUI;
-      private Transform descriptionUI;
 
       private List<SettingsEntityWithValueView<T>> settingViews;
-      private SettingsDescriptionPCView descriptionView;
 
-      /// <summary>
-      /// Expected path as of 2.1.5r
-      /// </summary>
-      public const string PATH_MAIN_UI = "Canvas/SettingsView/ContentWrapper/VirtualListVertical/Viewport/Content";
-
-      /// <summary>
-      /// Expected path as of 2.1.5r
-      /// </summary>
-      public const string PATH_DESCRIPTION_UI = "Canvas/SettingsView/ContentWrapper/DescriptionView";
-
-      /// <summary>
-      /// Constuctor for SettingsDescriptionUpdater. Sets up the paths for where the UI gameobjects at located
-      /// </summary>
-      /// <param name="pathMainUI">
-      /// Optional. This is the path to main UI where setting GameOjects are located are located.
-      /// Defaults to PATH_MAIN_UI which should work in 2.1.5r.
-      /// </param>
-      /// <param name="pathDesriptionUI">
-      /// This is the path to the Description UI where the Description GameOject SettingsDescriptionPCView is located.
-      /// Defaults to PATH_DESCRIPTION_UI which should work in 2.1.5r.
-      /// </param>
-      public SettingsDescriptionUpdater(string pathMainUI = PATH_MAIN_UI, string pathDesriptionUI = PATH_DESCRIPTION_UI)
-      {
-        pathMainUi = pathMainUI;
-        pathDescriptionUi = pathDesriptionUI;
-      }
 
       private bool Ensure()
       {
         // UI tends to change frequently, ensure that eveything is up to date.
 
-        if ((mainUI = Game.Instance.RootUiContext.m_CommonView.transform) == null)
-          return false;
-
-        settingsUI = mainUI.Find(pathMainUi);
-        descriptionUI = mainUI.Find(pathDescriptionUi);
-        if (settingsUI == null || descriptionUI == null)
+        settingsUI = (Game.Instance.RootUiContext.m_CommonView as CommonPCView)?.m_SettingsPCView.View.transform ;
+        if (settingsUI == null)
           return false;
 
         settingViews = settingsUI.gameObject.GetComponentsInChildren<SettingsEntityWithValueView<T>>().ToList();
-        descriptionView = descriptionUI.GetComponent<SettingsDescriptionPCView>();
 
-        if (settingViews == null || descriptionView == null || settingViews.Count == 0)
+        if (settingViews == null || settingViews.Count == 0)
           return false;
 
         return true;
@@ -238,7 +167,7 @@ namespace ModMenu
         foreach (var settingView in settingViews)
         {
           var test = (T)settingView.GetViewModel();
-          if (test.Title.Equals(title))
+          if (test.Title.Text.Equals(title))
           {
             svm = test;
               break;
@@ -250,28 +179,11 @@ namespace ModMenu
 
         svm.GetType().GetField("Description").SetValue(svm, description);
 
-        descriptionView.m_DescriptionText.text = description;
+        EventBus.RaiseEvent<ISettingsDescriptionUIHandler>(handler => handler.HandleShowSettingsDescription(svm.UISettingsEntity, null, description));
 
         return true;
       }
     }
 
-
-    [HarmonyPatch(typeof(LocalizationManager))]
-    static class LocalizationManager_Patch
-    {
-      [HarmonyPatch(nameof(LocalizationManager.OnLocaleChanged)), HarmonyPostfix]
-      static void Postfix()
-      {
-        try
-        {
-          Strings.ForEach(str => str.Register());
-        }
-        catch (Exception e)
-        {
-          Main.Logger.LogException("Failed to handle locale change.", e);
-        }
-      }
-    }
   }
 }

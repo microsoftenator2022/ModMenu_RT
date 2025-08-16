@@ -1,17 +1,22 @@
 ﻿using Kingmaker;
 using Kingmaker.Localization;
 using Kingmaker.Modding;
-using Kingmaker.PubSubSystem;
+using Kingmaker.PubSubSystem.Core;
 using Kingmaker.Settings;
-using Kingmaker.UI;
-using Kingmaker.UI.SettingsUI;
-using Kingmaker.Utility;
+using Kingmaker.UI.Models.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets.Dropdowns;
+using Kingmaker.Settings.Interfaces;
+using Kingmaker.Settings.Entities;
+using Kingmaker.Utility.UnityExtensions;
 using ModMenu.NewTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityModManagerNet;
+using Kingmaker.Code.UI.MVVM.VM.MessageBox;
+using Kingmaker.PubSubSystem;
 
 namespace ModMenu.Settings
 {
@@ -282,6 +287,7 @@ namespace ModMenu.Settings
     /// Sets the row height. Keep in mind the scaling is relative to resolution; a standard row has a height of 40. The
     /// image width will be scaled to preserve the aspect ratio.
     /// </param>
+    [Obsolete("Why would you ever use it? If you need an image for the mod, can set an illustration.")]
     public SettingsBuilder AddImage(Sprite sprite, int height)
     {
       return AddImageInternal(sprite, height);
@@ -317,6 +323,7 @@ namespace ModMenu.Settings
     /// <remarks>Added in v1.1.0</remarks>
     /// 
     /// <param name="onDefaultsApplied">Invoked after default settings are applied.</param>
+    [Obsolete("There is no need to add Default button anymore, because the vanialla Default button at the bottom of the screen affects only the selected mod")]
     public SettingsBuilder AddDefaultButton(Action onDefaultsApplied = null)
     {
       // Make sure OnDefaultsApplied is not null or the dialog doesn't close
@@ -468,19 +475,19 @@ namespace ModMenu.Settings
         string.Format(
           Game.Instance.BlueprintRoot.LocalizedTexts.UserInterfacesText.SettingsUI.RestoreAllDefaultsMessage,
           Group.Title);
-      EventBus.RaiseEvent(delegate (IMessageModalUIHandler w)
+      EventBus.RaiseEvent(delegate (IDialogMessageBoxUIHandler w)
       {
         w.HandleOpen(
           text,
-          MessageModalBase.ModalType.Dialog,
-          new Action<MessageModalBase.ButtonType>(OnDefaultDialogAnswer));
+          DialogMessageBoxBase.BoxType.Dialog,
+          OnDefaultDialogAnswer);
       },
       true);
     }
 
-    public void OnDefaultDialogAnswer(MessageModalBase.ButtonType buttonType)
+    public void OnDefaultDialogAnswer(DialogMessageBoxBase.BoxButton buttonType)
     {
-      if (buttonType != MessageModalBase.ButtonType.Yes)
+      if (buttonType != DialogMessageBoxBase.BoxButton.Yes)
         return;
 
       foreach (var setting in SettingsEntities.Values)
@@ -494,10 +501,10 @@ namespace ModMenu.Settings
       return
         Helpers.CreateString(
           $"mod-menu.default-description.{Group.name}",
-          enGB: $"Restore all settings in {Group.Title} to their defaults",
-          ruRU: $"Вернуть все настройки в группе {Group.Title} к значениям по умолчанию",
-          zhCN: $"还原所有{Group.Title}中的设置到默认值",
-          deDE: $"Setze alle Einstellungen in {Group.Title} auf ihre Standardwerte zurück",
+          enGB: $"Restore all settings in {Group.Title.Text} to their defaults",
+          ruRU: $"Вернуть все настройки в группе {Group.Title.Text} к значениям по умолчанию",
+          zhCN: $"还原所有{Group.Title.Text}中的设置到默认值",
+          deDE: $"Setze alle Einstellungen in {Group.Title.Text} auf ihre Standardwerte zurück",
           frFR: "Rétablir les valeurs par défaut de tous les paramètres sous {Group.Title}");
     }
 
@@ -506,15 +513,15 @@ namespace ModMenu.Settings
       return
         Helpers.CreateString(
           $"mod-menu.default-description-long.{Group.name}",
-          enGB: $"Sets each settings under {Group.Title} to its default value. Your current settings will be lost."
+          enGB: $"Sets each settings under {Group.Title.Text} to its default value. Your current settings will be lost."
           + $" Settings in other groups are not affected. Keep in mind this will apply to sub-groups under"
-          + $" {Group.Title} as well (anything that is hidden when the group is collapsed).",
-          ruRU: $"При нажатии на кнопку все настройки в группе {Group.Title} примут значения по умолчанию." +
+          + $" {Group.Title.Text} as well (anything that is hidden when the group is collapsed).",
+          ruRU: $"При нажатии на кнопку все настройки в группе {Group.Title.Text} примут значения по умолчанию." +
           $" Ваши текущие настройки будут потеряны. Настройки из других групп затронуты не будут. Обратите внимание," +
-          $" что изменения коснутся в том числе настроек из подгрупп, вложенных в {Group.Title}" +
+          $" что изменения коснутся в том числе настроек из подгрупп, вложенных в {Group.Title.Text}" +
           $"  (т.е. все те настройки, которые оказываются скрыты, когда вы сворачиваете группу).",
-          zhCN: $"{Group.Title}之中每一项设置的值都会变成各自的默认值。你的当前设置会丢失。其它分组的设置不受影响。" +
-          $"注意这也会影响{Group.Title}内部的小分组（只要是折叠之后看不见的都会影响.",
+          zhCN: $"{Group.Title.Text}之中每一项设置的值都会变成各自的默认值。你的当前设置会丢失。其它分组的设置不受影响。" +
+          $"注意这也会影响{Group.Title.Text}内部的小分组（只要是折叠之后看不见的都会影响.",
           deDE: "Setzt alle Einstellungen unter {Group.Title} auf ihre Standardwerte zurück. Die aktuellen Einstellungen gehen dabei verloren. " +
           "Einstellungen in anderen Gruppen werden nicht beeinflusst. Beachte, dass dies auch die Untergruppen von {Group.Title} betrifft.",
           frFR: "Rétablit la valeur par défaut pour tous les paramètres sous {Group.Title}. Vos paramètres actuels vont être perdus. " +
@@ -733,13 +740,14 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityBool CreateEntity()
     {
-      return new SettingsEntityBool(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityBool(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityBool CreateUIEntity()
     {
       var uiEntity = ScriptableObject.CreateInstance<UISettingsEntityBool>();
       uiEntity.DefaultValue = DefaultValue;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 
@@ -758,12 +766,13 @@ namespace ModMenu.Settings
     public static Dropdown<T> New(
       string key, T defaultValue, LocalizedString description, UISettingsEntityDropdownEnum<T> dropdown)
     {
+      dropdown.m_EncyclopediaDescription ??= new();
       return new(key, defaultValue, description, dropdown);
     }
 
     protected override SettingsEntityEnum<T> CreateEntity()
     {
-      return new SettingsEntityEnum<T>(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityEnum<T>(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityDropdownEnum<T> CreateUIEntity()
@@ -823,13 +832,14 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityInt CreateEntity()
     {
-      return new SettingsEntityInt(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityInt(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityDropdownInt CreateUIEntity()
     {
       var dropdown = ScriptableObject.CreateInstance<UISettingsEntityDropdownInt>();
-      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.ToString()).ToList();
+      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.Text).ToList();
+      dropdown.m_EncyclopediaDescription = new();
       return dropdown;
     }
 
@@ -842,6 +852,7 @@ namespace ModMenu.Settings
       : base(key, defaultSelected, description)
     {
       DropdownValues = values;
+      
     }
   }
 
@@ -866,13 +877,14 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityInt CreateEntity()
     {
-      return new SettingsEntityInt(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityInt(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityDropdownButton CreateUIEntity()
     {
       var dropdown = UISettingsEntityDropdownButton.Create(Description, LongDescription, ButtonText, OnClick);
-      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.ToString()).ToList();
+      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.Text).ToList();
+      dropdown.m_EncyclopediaDescription = new();
       return dropdown;
     }
 
@@ -941,7 +953,7 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityFloat CreateEntity()
     {
-      return new SettingsEntityFloat(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityFloat(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntitySliderFloat CreateUIEntity()
@@ -952,6 +964,7 @@ namespace ModMenu.Settings
       uiEntity.m_Step = Step;
       uiEntity.m_DecimalPlaces = DecimalPlaces;
       uiEntity.m_ShowValueText = ShowValueText;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 
@@ -1009,7 +1022,7 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityInt CreateEntity()
     {
-      return new SettingsEntityInt(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityInt(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntitySliderInt CreateUIEntity()
@@ -1018,6 +1031,7 @@ namespace ModMenu.Settings
       uiEntity.m_MinValue = MinValue;
       uiEntity.m_MaxValue = MaxValue;
       uiEntity.m_ShowValueText = ShowValueText;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 

@@ -1,9 +1,11 @@
 ﻿using JetBrains.Annotations;
 using Kingmaker.Localization;
-using Kingmaker.Localization.Shared;
+using Kingmaker.Localization.Enums;
 using Kingmaker.Modding;
-using Kingmaker.UI.SettingsUI;
-using Kingmaker.Utility;
+using Kingmaker.UI.Models.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.Utility.DotNetExtensions;
+using Kingmaker.Utility.UnityExtensions;
 using ModMenu.NewTypes.ModRecording;
 using System;
 using System.Collections.Generic;
@@ -113,6 +115,7 @@ namespace ModMenu.Settings
     {
       Info info = new(Helpers.EmptyString, Helpers.EmptyString);
       UISettingsGroup pseudoGroup = ScriptableObject.CreateInstance<UISettingsGroup>();
+      pseudoGroup.SettingsList = Array.Empty<UISettingsEntityBase>();
       pseudoGroup.Title = Helpers.EmptyString;
       EmptyInstance = new(info, new UISettingsGroup[1] { pseudoGroup });
       ModsMenuEntity.Add(EmptyInstance);
@@ -167,7 +170,7 @@ namespace ModMenu.Settings
     public string AuthorName { get; private set; }
     public LocalizedString LocalizedModDescription { get; private set; }
     public string NonLocalizedModDescription { get; private set; }
-    private string ModDescription { get { return LocalizedModDescription ?? NonLocalizedModDescription; } }
+    private string ModDescription { get { return LocalizedModDescription.Text ?? NonLocalizedModDescription; } }
     private string m_CachedDescription;
     private Locale m_LastLocale;
     internal bool AllowModDisabling { get; set; }
@@ -360,7 +363,7 @@ namespace ModMenu.Settings
 
     internal string GenerateDescription()
       {
-        if (!m_CachedDescription.IsNullOrEmpty() && m_LastLocale == LocalizationManager.CurrentLocale)
+        if (!m_CachedDescription.IsNullOrEmpty() && m_LastLocale == LocalizationManager.Instance.CurrentLocale)
           return m_CachedDescription;
 
         else
@@ -368,16 +371,16 @@ namespace ModMenu.Settings
         {
           string result = "";
           if (!string.IsNullOrEmpty(AuthorName))
-            result += $"<align=\"center\"><size=80%>{stringAuthor}: {AuthorName}</size></align>\n";
+            result += $"<align=\"center\"><size=80%>{stringAuthor.Text}: {AuthorName}</size></align>\n";
 
           if (!string.IsNullOrEmpty(VersionNumber))
-            result += $"<align=\"center\"><size=60%><b>({stringVer}: {VersionNumber})</b></size></align>\n";
+            result += $"<align=\"center\"><size=60%><b>({stringVer.Text}: {VersionNumber})</b></size></align>\n";
 
           //result = $"<align=\"center\"><size=60%><b>{result}</b></size></align>\n";
           if (!string.IsNullOrEmpty(VersionNumber))
             result += $"\n{ModDescription}";
           m_CachedDescription= result;
-          m_LastLocale = LocalizationManager.CurrentLocale;
+          m_LastLocale = LocalizationManager.Instance.CurrentLocale;
           return result;
         }
         catch(Exception ex)  
@@ -395,7 +398,7 @@ namespace ModMenu.Settings
       else if (OwlMod is not null)
         return $"OwlMod {OwlMod.Manifest?.UniqueName ?? "nameless mod"}";
       else
-        return ModName;
+        return ModName.Text;
     }
   }
 }

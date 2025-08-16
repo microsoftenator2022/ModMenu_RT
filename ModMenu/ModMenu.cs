@@ -1,6 +1,8 @@
 ﻿using JetBrains.Annotations;
 using Kingmaker.Settings;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI;
+using Kingmaker.Settings.Interfaces;
+using Kingmaker.Settings.Entities;
 using ModMenu.Settings;
 using System;
 using System.Collections.Generic;

@@ -1,8 +1,9 @@
-﻿using Kingmaker.UI.SettingsUI;
+﻿using Kingmaker.UI.Models.SettingsUI;
 using Owlcat.Runtime.UI.MVVM;
 using Owlcat.Runtime.UI.VirtualListSystem.ElementSettings;
 using UnityEngine;
 using UnityEngine.UI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
 
 namespace ModMenu.NewTypes
 {
@@ -18,6 +19,7 @@ namespace ModMenu.NewTypes
       image.Sprite = sprite;
       image.Height = height;
       image.ImageScale = imageScale;
+      image.m_EncyclopediaDescription = new();
       return image;
     }
 
