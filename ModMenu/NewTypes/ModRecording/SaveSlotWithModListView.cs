@@ -121,9 +121,19 @@ namespace ModMenu.NewTypes.ModRecording
         Mark.GetComponent<Image>().sprite = IconFailure;
         newPrefab.RedMark = Mark.gameObject;
         if (newUntypedPrefab is SaveSlotWithModListPCView pcView)
-          { m_config_PC = pcView; Main.Logger.Log("Generated SaveSlotWithModListPCView config"); }
+        { 
+          m_config_PC = pcView;
+#if DEBUG
+          Main.Logger.Log("Generated SaveSlotWithModListPCView config");
+#endif
+        }
         else if (newUntypedPrefab is SaveSlotWithModListConsoleView consoleView)
-          { m_config_Console = consoleView; Main.Logger.Log("Generated SaveSlotWithModListConsoleView config"); }
+        {
+          m_config_Console = consoleView;
+#if DEBUG
+          Main.Logger.Log("Generated SaveSlotWithModListConsoleView config");
+#endif
+        }
         else
           throw new Exception("Generated a config which is neither PC nor Console!");
 

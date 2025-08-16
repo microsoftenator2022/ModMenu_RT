@@ -93,7 +93,9 @@ namespace ModMenu.NewTypes.ModRecording
 
     static TooltipBrickRecordedModView GenerateConfig()
     {
+#if DEBUG
       Main.Logger.Log("TooltipBrickRecordedModView GenerateConfig");
+#endif
       var go = new GameObject("TooltipBrickRecordedModView", typeof(RectTransform));
       go.SetActive(true);
       var view = go.AddComponent<TooltipBrickRecordedModView>();

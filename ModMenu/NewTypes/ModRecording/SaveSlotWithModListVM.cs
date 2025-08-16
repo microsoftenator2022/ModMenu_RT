@@ -78,7 +78,9 @@ namespace ModMenu.NewTypes.ModRecording
 
     public void OnUMMModStateChanged(ModEntry entry, bool IsBatch)
     {
+#if DEBUG
       Main.Logger.Log($"SaveSlotWithModListVM Running OnModStateChanged for save slot {Reference?.Name ?? "NULL"} for mod {entry.Info.Id}");
+#endif
       var m = UMMMods.FirstOrDefault(m => m.mod == entry);
       if (m is null)
       {
@@ -91,7 +93,9 @@ namespace ModMenu.NewTypes.ModRecording
     }
     public void OnOMMModStateChanged(string entry, bool IsBatch)
     {
+#if DEBUG
       Main.Logger.Log($"SaveSlotWithModListVM Running OnModStateChanged for save slot {Reference?.Name ?? "NULL"}");
+#endif
       var m = OwlMods.FirstOrDefault(m => m.record.Id == entry);
       if (m is null)
       {

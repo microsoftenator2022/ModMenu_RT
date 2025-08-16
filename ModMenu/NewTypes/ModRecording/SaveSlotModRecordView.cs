@@ -110,7 +110,9 @@ namespace ModMenu.NewTypes.ModRecording
 
     internal void Refresh()
     {
+#if DEBUG
       Main.Logger.Log($"SaveSlotModRecordView run Refresh");
+#endif
       var saveSlot = (SaveSlotWithModListVM)ViewModel;
       var totalMods = saveSlot.OwlMods.Count + saveSlot.UMMMods.Count + saveSlot.OtherMods.Count;
       bool Console = ButtonEnable == null || ButtonDisable == null;

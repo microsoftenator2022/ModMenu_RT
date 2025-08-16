@@ -102,13 +102,17 @@ namespace ModMenu.NewTypes
       if (Entry != null)
       {
         handler.HandleShowSettingsDescription(UISettingsEntityDropdownModMenuEntry.instance, Entry.ModInfo.ModName.Text, Entry.ModInfo.GenerateDescription());
+#if DEBUG
         Main.Logger.Log($"HandleModDescription {Entry.ModInfo.ModName.Text}");
+#endif
       }
     }
 
     void HandleHover(bool hover)
     {
+#if DEBUG
       Main.Logger.Log($"HandleHover");
+#endif
       if (hover)
         EventBus.RaiseEvent<ISettingsDescriptionUIHandler>(HandleModDescription);
     }
@@ -127,11 +131,15 @@ namespace ModMenu.NewTypes
     {
       if (__instance.m_SettingsEntity is UISettingsEntityDropdownModMenuEntry maybeInstance && maybeInstance == UISettingsEntityDropdownModMenuEntry.instance)
       {
+#if DEBUG
         Main.Logger.Log($"AddModImageToTooltip inserting image {__instance.m_OwnTitle}");
+#endif
         if (ModsMenuEntity.ModEntries.TryFind((ModsMenuEntry mod) => mod?.ModInfo.ModName.Text == __instance.m_OwnTitle, out var mod) 
           && mod?.ModInfo.ModImage is Sprite image) 
         {
+#if DEBUG
           Main.Logger.Log($"AddModImageToTooltip Prepend");
+#endif
           var list = __result.ToArray();
           var title = list.OfType<TooltipBrickTitle>().FirstOrDefault();
           if (title != null)
@@ -145,7 +153,9 @@ namespace ModMenu.NewTypes
       }
       else
       {
+#if DEBUG
         Main.Logger.Log($"AddModImageToTooltip returning. Was {__instance.m_SettingsEntity?.GetType().Name ?? "null type?"}");
+#endif
       }
 
       return __result;
