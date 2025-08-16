@@ -10,14 +10,8 @@ namespace ModMenu
   [HarmonyPatch(typeof(OwlcatToggleGroup), nameof(OwlcatToggleGroup.HandleToggleOn))]
   internal static class FixOwlcatToggleGroup
   {
-    static Dictionary<OwlcatToggle, IDisposable> MakeCopy(Dictionary<OwlcatToggle, IDisposable> original)
-    {
-      var copy = new Dictionary<OwlcatToggle, IDisposable>();
-      foreach (var entry in original)
-        copy.Add(entry.Key, entry.Value);
-
-      return copy;
-    }
+    static Dictionary<OwlcatToggle, IDisposable> MakeCopy(Dictionary<OwlcatToggle, IDisposable> original) =>
+      new(original);
 
     static readonly MethodInfo get_Keys =
       typeof(Dictionary<OwlcatToggle, IDisposable>)
