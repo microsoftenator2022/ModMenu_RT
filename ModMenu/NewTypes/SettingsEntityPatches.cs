@@ -38,7 +38,6 @@ using Kingmaker.UI.Models.SettingsUI.SettingAssets;
 using Kingmaker.Code.UI.MVVM;
 using static UnityModManagerNet.UnityModManager;
 using Kingmaker.Utility.DotNetExtensions;
-using System.Security.Policy;
 using UniRx;
 
 namespace ModMenu.NewTypes

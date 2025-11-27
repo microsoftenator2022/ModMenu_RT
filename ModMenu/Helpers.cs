@@ -30,12 +30,12 @@ namespace ModMenu
   /// <summary>
   /// Generic utils for simple operations.
   /// </summary>
-  internal static class Helpers
+  public static class Helpers
   {
     private static readonly List<LocalString> Strings = new();
     internal static LocalizedString EmptyString = CreateString("", "");
 
-    internal static LocalizedString CreateString(string key, string enGB, string ruRU = null, string zhCN = null, string deDE = null, string frFR = null)
+    public static LocalizedString CreateString(string key, string enGB, string ruRU = null, string zhCN = null, string deDE = null, string frFR = null)
     {
       var localString = new LocalString(key, enGB, ruRU, zhCN, deDE, frFR);
       Strings.Add(localString);

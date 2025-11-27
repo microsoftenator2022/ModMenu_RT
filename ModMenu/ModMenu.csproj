@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk" InitialTargets="GenerateCustomPropsFile">
-	<Import Project="GamePath.props" Condition="Exists('GamePath.props')" />
+  <Import Project="GamePath.props" Condition="Exists('GamePath.props')" />
 
   <PropertyGroup>
     <LangVersion>preview</LangVersion>
-    <TargetFramework>net481</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>ModMenu_RT</AssemblyName>
     <RootNamespace>ModMenu</RootNamespace>
@@ -24,9 +24,9 @@
 
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <None Remove="WittleWolfie.png" />
-	  <None Remove="UI_CharGen_IconDislike.png" />
-	  <None Remove="UI_CharGen_IconLike.png" />
-	  <None Remove="UI_journal_iconok_new2.png" />
+    <None Remove="UI_CharGen_IconDislike.png" />
+    <None Remove="UI_CharGen_IconLike.png" />
+    <None Remove="UI_journal_iconok_new2.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,21 +41,21 @@
     <None Remove="UI_QuestNotification_IconFail.png" />
   </ItemGroup>
 
-
   <ItemGroup>
-	  <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_CharGen_IconDislike.png" />
-	  <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_CharGen_IconLike.png" />
-	  <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_journal_iconok_new2.png" />
-	  <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconFail.png" />
-	  <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconNew.png" />
-	  <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconOk.png" />
-	  <EmbeddedResource Include="TestSettingsIllustration.png" />
-	  <EmbeddedResource Include="TestSettingsIllustration2.png" />
-	  <EmbeddedResource Include="WittleWolfie.png" />
+    <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_CharGen_IconDislike.png" />
+    <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_CharGen_IconLike.png" />
+    <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_journal_iconok_new2.png" />
+    <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconFail.png" />
+    <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconNew.png" />
+    <EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconOk.png" />
+    <EmbeddedResource Include="TestSettingsIllustration.png" />
+    <EmbeddedResource Include="TestSettingsIllustration2.png" />
+    <EmbeddedResource Include="WittleWolfie.png" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" IncludeAssets="compile; build; contentfiles; analyzers; buildtransitive" PrivateAssets="all" />
+    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.1" />
     <PackageReference Include="MicroUtils.HarmonyAnalyzers" Version="1.6.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -72,7 +72,7 @@
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\Utility.*.dll" Private="false" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\Assembly-CSharp-firstpass.dll" Private="false" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\LocalizationShared.dll" Private="false" />
-	  <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\Unity.TextMeshPro.dll*" Private="false" Publicize="true" />
+    <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\Unity.TextMeshPro.dll*" Private="false" Publicize="true" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\UnityEngine.ImageConversionModule.dll" Private="false" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\UnityEngine.TextRenderingModule.dll" Private="false" />
@@ -81,7 +81,7 @@
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\UniRx.dll" Private="false" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\Newtonsoft.Json.dll" Private="false" />
     <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\Rewired_Core.dll" Private="false" />
-    <Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\0Harmony.dll" Private="false" />
+    <!--<Reference Include="$(RogueTraderInstallDir)\WH40KRT_Data\Managed\0Harmony.dll" Private="false" />-->
   </ItemGroup>
 
   <ItemGroup>
@@ -94,8 +94,8 @@
   <!--<Target Name="Deploy">-->
     <ItemGroup>
       <ToCopy Include="$(OutputPath)\$(AssemblyName).dll" />
-	    <ToCopy Include="$(OutputPath)\$(AssemblyName).pdb" />
-	    <ToCopy Include="$(OutputPath)\Info.json" />
+      <ToCopy Include="$(OutputPath)\$(AssemblyName).pdb" />
+      <ToCopy Include="$(OutputPath)\Info.json" />
     </ItemGroup>
 
     <Copy SourceFiles="@(ToCopy)" DestinationFolder="$(RogueTraderData)\UnityModManager\$(MSBuildProjectName)" />
